@@ -27,7 +27,7 @@ install() {
   
   # we have source code?
   src="$VPKG_ROOT"/lib/"$name"/src
-  if [ ! -e "$src" ] || [ -z $(ls "$src") ]
+  if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
   then
     git clone "$REPO_URL" "$src"
   fi
