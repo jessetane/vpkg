@@ -41,15 +41,11 @@ install() {
   git checkout "$version"
   
   # clean
-  uninstall "$name" "$version"
+  vpkg uninstall "$name" "$version"
   
   # install
   mkdir -p ../versions
   cp -R . ../versions/"$version"
-}
-
-uninstall() {
-  echo "TODO"
 }
 
 # run
