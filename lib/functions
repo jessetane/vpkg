@@ -111,7 +111,7 @@ link() {
   # create exectuables
   ls "$pkg"/versions/"$version"/bin | while read bin
   do
-    echo -e "exec $pkg/versions/$version/bin/$bin \"$@\"" > "$VPKG_ROOT"/bin/"$bin"
+    echo "exec $pkg/versions/$version/bin/$bin "'$@' > "$VPKG_ROOT"/bin/"$bin"
     chmod +x "$VPKG_ROOT"/bin/"$bin"
   done
 }
