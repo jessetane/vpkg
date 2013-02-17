@@ -11,6 +11,7 @@
 validate() {
   [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
   [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
+  return 0
 }
 
 lookup() {
@@ -111,6 +112,7 @@ link() {
   ls "$pkg"/versions/"$version"/bin | while read bin
   do
     echo "exec $pkg/versions/$version/bin/$bin" > "$VPKG_ROOT"/bin/"$bin"
+    chmod +x "$VPKG_ROOT"/bin/"$bin"
   done
 }
 
