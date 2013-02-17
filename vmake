@@ -41,7 +41,7 @@ install() {
   git checkout "$version"
   
   # clean
-  vpkg uninstall "$name" "$version"
+  bin/vpkg uninstall "$name" "$version"
   
   # install
   mkdir -p ../versions
