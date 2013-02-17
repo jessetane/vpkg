@@ -6,27 +6,17 @@
 cd "$(dirname $BASH_SOURCE)" && cd "$(pwd)"
 
 # get deps
-. ../lib/vpkg
+. ../lib/functions
 
 # only run supported commands
-case "$1" in
-  
-  # get / build versions
-  "install" )
-  "uninstall" )
-  
-  # link a version ()
-  "link" )
-  "unlink" )
-  
-  # use a version (prepends $PATH)
-  "use" )
-  "unuse" )
-  
-    # do it
-    "$1" "${@:2}"
-    
-  # not supported
-  * )
-    error "command not found: $cmd" && exit 1
-esac
+if [ "$cmd" == "install" ] ||
+   [ "$cmd" == "uninstall" ] ||
+   [ "$cmd" == "link" ] ||
+   [ "$cmd" == "unlink" ] ||
+   [ "$cmd" == "use" ] ||
+   [ "$cmd" == "unuse" ]
+then
+  "$cmd" "${@:2}"
+else
+  "$cmd: command not found" && exit 1
+fi
