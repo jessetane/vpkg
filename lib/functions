@@ -98,7 +98,7 @@ link() {
   local pkg="$VPKG_ROOT"/lib/"$name"
   
   # validate
-  ! is_active && return 1
+  ! validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # unlink if necessary
@@ -120,7 +120,7 @@ unlink() {
   local pkg="$VPKG_ROOT"/lib/"$name"
   
   # validate
-  ! is_active && return 1
+  ! validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # is the version linked?
@@ -142,7 +142,7 @@ use() {
   local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
 
   # validate
-  ! is_active && return 1
+  ! validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   [ ! -e "$bin" ] echo "version $version is not installed" >&2 && return 1
 
@@ -159,7 +159,7 @@ unuse() {
   local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
 
   # validate
-  ! is_active && return 1
+  ! validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # remove all old versions

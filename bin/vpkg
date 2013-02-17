@@ -9,6 +9,7 @@ cd "$(dirname $BASH_SOURCE)" && cd "$(pwd)"
 . ../lib/functions
 
 # only run supported commands
+cmd="$1"
 if [ "$cmd" == "install" ] ||
    [ "$cmd" == "uninstall" ] ||
    [ "$cmd" == "link" ] ||
