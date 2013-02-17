@@ -84,7 +84,7 @@ uninstall() {
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # unlink if necessary
-  unlink "$name" "$version"
+  unlink "$name" "$version" > /dev/null 2>&1
   
   # wipe out the lib entry
   rm -rf "$VPKG_ROOT"/lib/"$name"/versions/"$version"
@@ -103,7 +103,7 @@ link() {
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # unlink if necessary
-  unlink "$name" "$version"
+  unlink "$name" "$version" > /dev/null 2>&1
   
   # create link
   ln -s "$pkg"/versions/"$version" "$pkg"/"$VPKG_LINK_NAME"
