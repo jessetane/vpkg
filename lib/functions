@@ -1,0 +1,167 @@
+#
+# vpkg
+#
+
+# some default vars
+[ -z "$VPKG_MAKE" ] && VPKG_MAKE="vmake"
+[ -z "$VPKG_LINK_NAME" ] && VPKG_LINK_NAME="link"
+
+# some functions
+
+validate() {
+  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
+  [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
+}
+
+lookup() {
+  local name="$1"
+  
+  # validate
+  ! validate && return 1
+  
+  # TODO: lookup formula location from a package registry?
+  # formula_location=""
+  
+  # manually input a formula location
+  while [ -z "$formula_location" ]
+  do
+    read -p "no formula found for $name, type a url: " formula_location
+  done
+  
+  # 
+  echo "$formula_location"
+}
+
+install() {
+  local name="$1"
+  local version="$2"
+  local src="$VPKG_ROOT"/lib/"$name"/src
+  
+  # validate
+  ! validate && return 1
+  
+  # we have no source files
+  if [ ! -e "$src" ] || [ -z $(ls "$src") ]
+  then
+    mkdir -p "$src"
+    curl -f "$(lookup "$name")" -o "$src"/"$VPKG_MAKE"
+    [ $? != 0 ] && exit 1
+    chmod +x "$src"/"$VPKG_MAKE"
+    install "$name" "$version"
+    
+  # we have source files but no vmake
+  elif [ ! -e "$src"/"$VPKG_MAKE" ]
+  then
+  
+    # require a version if installing sans vmake
+    [ -z "$version" ] && echo "installing without a vmake file requires you to specify a version" >&2 && exit 1
+    
+    # uninstall
+    uninstall "$name" "$version" > /dev/null 2>&1
+    
+    # copy $src over into versions/
+    cp -R "$src" "$VPKG_ROOT"/lib/"$name"/versions/"$version"
+    
+  # we have source files and vmake
+  else
+    
+    # uninstall
+    uninstall "$name" "$version" > /dev/null 2>&1
+    
+    # vmake install
+    cd "$src"
+    ./vmake install "$name" "$version"
+  fi
+}
+
+uninstall() {
+  local name="$1"
+  local version="$2"
+  
+  # validate
+  ! validate && return 1
+  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  
+  # unlink if necessary
+  unlink "$name" "$version" > /dev/null 2>&1
+  
+  # wipe out the lib entry
+  rm -rf "$VPKG_ROOT"/lib/"$name"/versions/"$version"
+}
+
+# vpkg install php
+# vpkg link php
+
+link() {
+  local name="$1"
+  local version="$2"
+  local pkg="$VPKG_ROOT"/lib/"$name"
+  
+  # validate
+  ! is_active && return 1
+  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  
+  # unlink if necessary
+  unlink "$name" "$version" > /dev/null 2>&1
+  
+  # create link
+  ln -s "$pkg"/versions/"$version" "$pkg"/"$VPKG_LINK_NAME"
+  
+  # create exectuables
+  ls "$pkg"/versions/"$version"/bin | while read bin
+  do
+    echo "exec $pkg/versions/$version/bin/$bin" > "$VPKG_ROOT"/bin/"$bin"
+  done
+}
+
+unlink() {
+  local name="$1"
+  local version="$2"
+  local pkg="$VPKG_ROOT"/lib/"$name"
+  
+  # validate
+  ! is_active && return 1
+  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  
+  # is the version linked?
+  [ $(readlink "$pkg/$VPKG_LINK_NAME") != versions/"$version" ] && echo "version $version is not linked" >&2 && return 1
+  
+  # remove link
+  rm -rf "$pkg"/"$VPKG_LINK_NAME"
+  
+  # remove executables
+  ls "$pkg"/versions/"$version"/bin | while read bin
+  do
+    rm -rf "$VPKG_ROOT"/bin/"$bin"
+  done
+}
+
+use() {
+  local name="$1"
+  local version="$2"
+  local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
+
+  # validate
+  ! is_active && return 1
+  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  [ ! -e "$bin" ] echo "version $version is not installed" >&2 && return 1
+
+  # unuse old versions
+  unuse "$name" "$version"
+
+  # use new version
+  export PATH="$bin":$PATH
+}
+
+unuse() {
+  local name="$1"
+  local version="$2"
+  local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
+
+  # validate
+  ! is_active && return 1
+  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  
+  # remove all old versions
+  export PATH=$(echo "$PATH" | sed "s|$VPKG_ROOT/lib/$name/versions/[^/]*/bin:||g")
+}

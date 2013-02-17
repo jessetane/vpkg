@@ -1,0 +1,32 @@
+#
+# pkg
+#
+
+# go to own dir
+cd "$(dirname $BASH_SOURCE)" && cd "$(pwd)"
+
+# get deps
+. ../lib/vpkg
+
+# only run supported commands
+case "$1" in
+  
+  # get / build versions
+  "install" )
+  "uninstall" )
+  
+  # link a version ()
+  "link" )
+  "unlink" )
+  
+  # use a version (prepends $PATH)
+  "use" )
+  "unuse" )
+  
+    # do it
+    "$1" "${@:2}"
+    
+  # not supported
+  * )
+    error "command not found: $cmd" && exit 1
+esac

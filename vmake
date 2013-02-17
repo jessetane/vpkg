@@ -1,0 +1,55 @@
+#
+# make
+#
+
+# vars
+LATEST_VERSION="0.0.1"
+REPO_URL="file:///Users/jessetane/Desktop/vpkg/lib/vpkg/src"
+
+# require $VPKG_ROOT
+[ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && exit 1
+
+# nothing can fail
+set -e
+
+# define some functions...
+
+install() {
+  name="$1"
+  version="$2"
+  
+  # valid?
+  [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
+  [ -z "$version" ] && version="master"
+  
+  # we have source code?
+  src="$VPKG_ROOT"/lib/"$name"/src
+  if [ ! -e "$src" ] || [ -z $(ls "$src") ]
+  then
+    git clone "$REPO_URL" src
+  fi
+  
+  # update
+  cd "$src"
+  git fetch --all
+  git fetch --tags
+  
+  # version
+  rm -rf *
+  git checkout "$version"
+  git reset --hard HEAD
+  
+  # clean
+  uninstall "$name" "$version"
+  
+  # install
+  cp -R bin ../versions/"$version"
+  cp -R lib ../versions/"$version"
+}
+
+uninstall() {
+  
+}
+
+# run
+"$1" "${@:2}"
