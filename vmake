@@ -8,7 +8,7 @@
 # vars
 REPO_URL="file:///Users/jessetane/Desktop/vpkg/lib/vpkg/src"
 DEFAULT_NAME="vpkg"
-DEFAULT_VERSION="0.0.3"
+DEFAULT_VERSION="0.0.4"
 
 # args
 cmd="$1"
