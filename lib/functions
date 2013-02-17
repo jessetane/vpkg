@@ -36,17 +36,19 @@ lookup() {
 install() {
   local name="$1"
   local version="$2"
-  local src="$VPKG_ROOT"/lib/"$name"/src
+  local pkg="$VPKG_ROOT"/lib/"$name"
+  local src="$pkg"/src
   
   # validate
   ! validate && return 1
   
   # we have no source files
-  if [ ! -e "$src" ] || [ -z $(ls "$src") ]
+  if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
   then
+    url="$(lookup "$name")"
     mkdir -p "$src"
-    curl -f "$(lookup "$name")" -o "$src"/"$VPKG_MAKE"
-    [ $? != 0 ] && exit 1
+    curl -f "$url" -o "$src"/"$VPKG_MAKE"
+    [ $? != 0 ] && rm -rf "$pkg" && exit 1
     chmod +x "$src"/"$VPKG_MAKE"
     install "$name" "$version"
     

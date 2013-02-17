@@ -19,5 +19,5 @@ if [ "$cmd" == "install" ] ||
 then
   "$cmd" "${@:2}"
 else
-  "$cmd: command not found" && exit 1
+  echo "$cmd: command not found" >&2 && exit 1
 fi
