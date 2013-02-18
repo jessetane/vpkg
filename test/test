@@ -1,0 +1,48 @@
+#
+# test
+#
+
+# go to own dir
+cd "$(dirname "$BASH_SOURCE")"
+
+# vars
+t=0
+
+check() {
+  if [ $? == 0 ]
+  then
+    echo "✔ passed test #$((t++)): $1"
+  else
+    echo "✘ failed test #$((t++)): $1" >&2
+    #teardown
+    exit 1
+  fi
+}
+
+setup() {
+  teardown
+  
+  # download vpkgfile
+  vpkgfile="$(curl "file://$(pwd)/../vpkgfile")" 
+  check "download vpkgfile"
+  
+  # bootstrap
+  mkdir tmp
+  echo "$vpkgfile" | bash -s bootstrap "$(pwd)"/tmp
+  check "bootstrap"
+  
+  # source fresh conf
+  source tmp/.vpkg
+  check "setup"
+}
+
+teardown() {
+  rm -rf tmp
+}
+
+basic() {
+  pass "basic"
+}
+
+# make some dirs
+setup

@@ -1,0 +1,13 @@
+#
+# .vpkg
+#
+
+# get root
+root="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+
+# pkg root
+export VPKG_ROOT="$root"
+
+# add bin to PATH
+export PATH="$VPKG_ROOT"/bin:"$PATH"
+
