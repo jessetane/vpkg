@@ -106,6 +106,7 @@ vpkg_link() {
   # validate
   ! vpkg_validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  [ ! -e "$pkg"/versions/"$version" ] && echo "version $version is not installed" >&2 && return 1
   
   # unlink if necessary
   vpkg_unlink "$name" "$version" > /dev/null 2>&1
