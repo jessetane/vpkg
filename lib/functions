@@ -58,6 +58,13 @@ vpkg_install() {
     chmod +x "$src"/"$VPKG_BUILD_FILE"
   fi
   
+  # only allow unspecified version if we don't have any versions already installed
+  if [ -z "$version" ]
+  then
+    [ -e "$pkg"/versions ] && versions="$(ls "$pkg/versions")"
+    [ -n "$versions" ] && echo "versions $versions are already installed" >&2 && return 1
+  fi
+  
   # is $version already installed?
   [ -e "$pkg"/versions/"$version" ] && echo "version $version is already installed" >&2 && return 1
   
