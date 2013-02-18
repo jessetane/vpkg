@@ -32,7 +32,7 @@ vpkg_lookup() {
   # manually input a formula location
   while [ -z "$formula_location" ]
   do
-    read -p "no formula found for $name, type a url: " formula_location
+    { read -p "no formula found for $name, type a url: " formula_location; }
   done
   
   # 
