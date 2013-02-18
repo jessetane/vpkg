@@ -14,7 +14,6 @@ check() {
     echo "✔ passed test #$((t++)): $1"
   else
     echo "✘ failed test #$((t++)): $1" >&2
-    #teardown
     exit 1
   fi
 }
@@ -31,20 +30,28 @@ setup() {
   echo "$vpkgfile" | bash -s bootstrap "$(pwd)"/tmp
   check "bootstrap"
   
-  # source fresh conf
+  # source fresh config
   source tmp/.vpkg
-  check "setup"
+  check "config"
+  
+  # check our binary linked properly
+  v=$(vpkg --version)
+  check "binary version: vpkg-$v"
 }
 
 teardown() {
   rm -rf tmp
 }
 
-basic() {
-  vpkg --version
-  check "version check"
+nodejs() {
+  
+  # basic install 
+  vpkg install nodejs
 }
 
-# make some dirs
+# test bootstrapping
 setup
-basic
+
+# nodejs requires only simple vpkgfile so 
+# we'll use that package for our basic test
+nodejs

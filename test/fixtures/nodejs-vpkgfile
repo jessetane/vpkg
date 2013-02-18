@@ -1,0 +1,62 @@
+#
+# nodejs vpkgfile
+#
+
+# defaults
+DEFAULT_NAME="nodejs"
+DEFAULT_VERSION="0.8.20"
+
+bail() {
+  echo "$1" >&2
+  exit 1
+}
+
+common() {
+  
+  # require $VPKG_ROOT
+  [ -z "$VPKG_ROOT" ] && bail '$VPKG_ROOT must be defined'
+  
+  # args
+  name="$1"
+  version="$2"
+  sourceVersion="$3"
+  
+  # defaults
+  [ -z "$name" ] && name="$DEFAULT_NAME"
+  [ -z "$version" ] && version="$DEFAULT_VERSION"
+  [ -z "$sourceVersion" ] && sourceVersion="$version"
+  
+  # some vars
+  os=$(uname | awk '{ print(tolower($1)) }')
+  arch=$(uname -p) && arch="${arch: -2}"
+  fname="node-v$sourceVersion-$os-x$arch"
+  url="http://nodejs.org/dist/v$sourceVersion/$fname.tar.gz"
+  src="$VPKG_ROOT"/lib/"$name"/src/versions
+}
+
+install() {
+  
+  # setup args and vars
+  common "$@"
+  
+  # we have source code?
+  if [ ! -e "$src/$sourceVersion" ]
+  then
+    mkdir -p "$src" && cd $_
+    ! curl -f "$url" && bail "version $sourceVersion could not be downloaded"
+    tar -xvzf "$fname".tar.gz
+    rm -rf "$fname".tar.gz
+    mv "$fname" "$sourceVersion"
+  fi
+  
+  # install
+  cd "$VPKG_ROOT"/lib/"$name"
+  mkdir -p versions
+  cp -R "$src/$sourceVersion" versions/"$version"
+}
+
+# require at least a command
+[ -z "$1" ] && echo "please specify a command" >&2 && exit 127
+
+# run
+"$1" "${@:2}"
