@@ -6,7 +6,7 @@
 cd "$(dirname "$BASH_SOURCE")"
 
 # where should we put these default vars...?
-[ -z "$VPKG_BUILD_FILE_FILE" ] && VPKG_BUILD_FILE_FILE="vpkgfile"
+[ -z "$VPKG_BUILD_FILE" ] && VPKG_BUILD_FILE="vpkgfile"
 [ -z "$VPKG_LINK_NAME" ] && VPKG_LINK_NAME="current"
 
 vpkg_version() {
@@ -56,7 +56,6 @@ vpkg_install() {
     curl -f "$url" -o "$src"/"$VPKG_BUILD_FILE"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
     chmod +x "$src"/"$VPKG_BUILD_FILE"
-    install "$name" "$version"
   fi
   
   # is $version already installed?

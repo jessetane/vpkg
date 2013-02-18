@@ -45,8 +45,14 @@ teardown() {
 
 nodejs() {
   
-  # basic install 
-  vpkg install nodejs
+  # for development
+  vpkg="../bin/vpkg"
+  
+  # basic install
+  echo "file://$(pwd)/fixtures/nodejs-vpkgfile" | "$vpkg" install nodejs
+  check "nodejs default install"
+  
+  
 }
 
 # test bootstrapping
