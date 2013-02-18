@@ -3,14 +3,14 @@
 #
 
 # go to own dir
-cd "$(dirname "$BASH_SOURCE")"
+dir="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
 
 # where should we put these default vars...?
 [ -z "$VPKG_BUILD_FILE" ] && VPKG_BUILD_FILE="vpkgfile"
 [ -z "$VPKG_LINK_NAME" ] && VPKG_LINK_NAME="current"
 
 vpkg_version() {
-  echo "$(basename "$(dirname "$(pwd)")")"
+  echo "$(basename "$(dirname "$dir")")"
 }
 
 vpkg_validate() {
@@ -62,7 +62,7 @@ vpkg_install() {
   if [ -z "$version" ]
   then
     [ -e "$pkg"/versions ] && versions="$(ls "$pkg/versions")"
-    [ -n "$versions" ] && echo "versions $versions are already installed" >&2 && return 1
+    [ -n "$versions" ] && echo "version(s) $versions are already installed" >&2 && return 0
   fi
   
   # is $version already installed?
@@ -85,8 +85,7 @@ vpkg_install() {
   else
     
     # install using 
-    cd "$src"
-    bash "$VPKG_BUILD_FILE" install "$@"
+    bash "$src"/"$VPKG_BUILD_FILE" install "$@"
   fi
 }
 
@@ -181,5 +180,5 @@ vpkg_unuse() {
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # remove all old versions
-  export PATH=$(echo "$PATH" | sed "s|$VPKG_ROOT/lib/$name/versions/[^/]*/bin:||g")
+  export PATH="$(echo "$PATH" | sed "s|$VPKG_ROOT/lib/$name/versions/[^/]*/bin:||g")"
 }
