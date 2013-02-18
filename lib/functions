@@ -24,7 +24,7 @@ vpkg_lookup() {
   local name="$1"
   
   # validate
-  ! validate && return 1
+  ! vpkg_validate && return 1
   
   # TODO: lookup formula location from a package registry?
   # formula_location=""
