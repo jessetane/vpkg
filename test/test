@@ -41,8 +41,10 @@ teardown() {
 }
 
 basic() {
-  pass "basic"
+  vpkg --version
+  check "version check"
 }
 
 # make some dirs
 setup
+basic
