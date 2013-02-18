@@ -11,9 +11,9 @@ t=0
 check() {
   if [ $? == 0 ]
   then
-    echo "✔ passed test #$((t++)): $1"
+    echo "✔  passed test #$((t++)): $1"
   else
-    echo "✘ failed test #$((t++)): $1" >&2
+    echo "✘  failed test #$((t++)): $1" >&2
     exit 1
   fi
 }
@@ -32,11 +32,11 @@ test_bootstrap() {
   # bootstrap
   mkdir tmp
   echo "$vpkgfile" | bash -s bootstrap "$(pwd)"/tmp
-  check "bootstrap"
+  check "bootstrap - create dirs and config"
   
   # source fresh config
   source tmp/.vpkg
-  check "bootstrap - valid config"
+  check "bootstrap - validate config"
   
   # check our binary linked properly
   test $(which vpkg) = "$VPKG_ROOT/bin/vpkg"
@@ -53,33 +53,33 @@ test_install() {
 }
 
 test_link() {
-  vkpg link "$fixture_name" "$fixture_version_main"
+  vpkg link "$fixture_name" "$fixture_version_main"
   check "link $fixture_name $fixture_version_main"
   test "$("$fixture_bin" --version)" = "$fixture_version_main"
   check "link version $fixture_version_main"
 }
 
 test_alt_install() {
-  vkpg install "$fixture_name" "$fixture_version_alt"
+  vpkg install "$fixture_name" "$fixture_version_alt"
   check "install $fixture_name $fixture_version_alt"
 }
 
 test_use() {
-  vkpg use "$fixture_name" "$fixture_version_alt"
+  vpkg use "$fixture_name" "$fixture_version_alt"
   check "vpkg_use $fixture_name $fixture_version_alt"
   test "$("$fixture_bin" -v)" = "$fixture_version_alt"
   check "version is $fixture_version_alt"
 }
  
 test_unuse() {
-  vkpg unuse "$fixture_name" "$fixture_version_alt"
+  vpkg unuse "$fixture_name" "$fixture_version_alt"
   check "vpkg_unuse $fixture_name $fixture_version_alt"
   test "$("$fixture_bin" -v)" = "$fixture_version_main"
   check "version is $fixture_version_main"
 }
 
 test_uninstall() {
-  vkpg uninstall "$fixture_name" "$fixture_version_main"
+  vpkg uninstall "$fixture_name" "$fixture_version_main"
   check "uninstall $fixture_name $fixture_version_main"
   test ! -e "$VPKG_ROOT"/bin/"$fixture_bin"
   check "bin link was removed"
@@ -90,7 +90,7 @@ test_uninstall() {
 }
 
 test_link_alt() {
-  vkpg link "$fixture_name" "$fixture_version_alt"
+  vpkg link "$fixture_name" "$fixture_version_alt"
   check "link $fixture_name $fixture_version_alt"
   test "$("$fixture_bin" --version)" = "$fixture_version_alt"
   check "link version $fixture_version_alt"
