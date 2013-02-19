@@ -92,10 +92,13 @@ __vpkg_install() {
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
   fi
   
+  # ensure we have a versions dir
+  mkdir -p "$versions"
+  
   # only allow unspecified version if we don't have any versions already installed
   if [ -z "$version" ]
   then
-    [ -e "$versions" ] && local installed="$(ls "$versions")"
+    local installed="$(ls "$versions")"
     [ -n "$installed" ] && echo -e "version(s): $installed are already installed" >&2 && return 0
   fi
   
