@@ -18,6 +18,13 @@ check() {
   fi
 }
 
+clean_version() {
+  while read data
+  do
+    echo "$data" | sed "s/[^0-9]*\(.*\)/\1/"
+  done
+}
+
 teardown() {
   rm -rf tmp
 }
@@ -57,9 +64,9 @@ test_install() {
 test_link() {
   vpkg link "$fixture_name" "$fixture_version_main"
   check "link $fixture_name $fixture_version_main"
-  v="$("$fixture_bin" --version)"
+  v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_main"
-  check "link version was: $v, should be: $fixture_version_main"
+  check "check link version $v = $fixture_version_main"
 }
 
 test_alt_install() {
@@ -70,15 +77,17 @@ test_alt_install() {
 test_use() {
   vpkg use "$fixture_name" "$fixture_version_alt"
   check "vpkg_use $fixture_name $fixture_version_alt"
-  test "$("$fixture_bin" -v)" = "$fixture_version_alt"
-  check "version is $fixture_version_alt"
+  v="$("$fixture_bin" --version | clean_version)"
+  test "$v" = "$fixture_version_alt"
+  check "check link version $v = $fixture_version_alt"
 }
  
 test_unuse() {
   vpkg unuse "$fixture_name" "$fixture_version_alt"
   check "vpkg_unuse $fixture_name $fixture_version_alt"
-  test "$("$fixture_bin" -v)" = "$fixture_version_main"
-  check "version is $fixture_version_main"
+  v="$("$fixture_bin" --version | clean_version)"
+  test "$v" = "$fixture_version_main"
+  check "check link version $v = $fixture_version_main"
 }
 
 test_uninstall() {
@@ -95,8 +104,9 @@ test_uninstall() {
 test_link_alt() {
   vpkg link "$fixture_name" "$fixture_version_alt"
   check "link $fixture_name $fixture_version_alt"
-  test "$("$fixture_bin" --version)" = "$fixture_version_alt"
-  check "link version $fixture_version_alt"
+  v="$("$fixture_bin" --version | clean_version)"
+  test "$v" = "$fixture_version_alt"
+  check "check link version $v = $fixture_version_alt"
 }
 
 # test bootstrapping
