@@ -6,7 +6,7 @@
 # repo location
 REPO_URL="file:///Users/jessetane/Desktop/vpkg/lib/vpkg/src"
 DEFAULT_NAME="vpkg"
-DEFAULT_VERSION="0.0.1"
+DEFAULT_VERSION="0.0.2"
 
 bail() {
   echo "$1" >&2
