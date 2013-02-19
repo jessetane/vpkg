@@ -75,7 +75,7 @@ test_alt_install() {
 }
 
 test_use() {
-  vpkg use "$fixture_name" "$fixture_version_alt"
+  vpkg_use "$fixture_name" "$fixture_version_alt"
   check "vpkg_use $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_alt"
@@ -83,7 +83,7 @@ test_use() {
 }
  
 test_unuse() {
-  vpkg unuse "$fixture_name" "$fixture_version_alt"
+  vpkg_unuse "$fixture_name" "$fixture_version_alt"
   check "vpkg_unuse $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_main"
