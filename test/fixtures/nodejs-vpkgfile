@@ -43,7 +43,8 @@ install() {
   if [ ! -e "$src/$sourceVersion" ]
   then
     mkdir -p "$src" && cd $_
-    ! curl -fO "$url" && bail "version $sourceVersion could not be downloaded"
+    echo "downloading $url..."
+    ! curl -fO# "$url" && bail "version $sourceVersion could not be downloaded"
     tar -xvzf "$fname".tar.gz > /dev/null 2>&1
     rm -rf "$fname".tar.gz
     mv "$fname" "$sourceVersion"

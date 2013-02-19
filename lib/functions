@@ -53,7 +53,8 @@ vpkg_install() {
   then
     url="$(vpkg_lookup "$name")"
     mkdir -p "$src"
-    curl -f "$url" -o "$src"/"$VPKG_BUILD_FILE"
+    echo "downloading $url..."
+    curl -f# "$url" -o "$src"/"$VPKG_BUILD_FILE"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
     chmod +x "$src"/"$VPKG_BUILD_FILE"
   fi
