@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+#	no-vpkgfile
+#
+
+# own dir
+cd "$(dirname "$BASH_SOURCE")"
+
+# if --version was passed, just print the version
+if [ "$1" = "--version" ]
+then
+  echo "$(basename "$(dirname "$(pwd)")")"
+  return 0
+fi
+
+# if we made it this far, say hello
+echo "hello from a package with no vpkgfile"

@@ -5,24 +5,22 @@
 # go to own dir
 cd "$(dirname "$BASH_SOURCE")"
 
-# vars
+# vars to keep track of number of tests run
 t=1
-expected=19
+expected=20
 
+# some helpers
 
-#
-# helpers
-#
-
-check() {
+tap() {
   if [ $? = 0 ]
   then
-    echo "✔  passed test #$((t++)): $1"
+    echo "✔  passed test #$t: $1"
   else
-    echo "✘  failed test #$((t++)): $1" >&2
-    summary
+    echo "✘  failed test #$t: $1" >&2
+    summarize
     exit 1
   fi
+  ((t++))
 }
 
 clean_version() {
@@ -32,7 +30,7 @@ clean_version() {
   done
 }
 
-summary() {
+summarize() {
   [ $((--t)) = $expected ] && status="success" || status="failure"
   echo ""
   echo "------------------ $status ------------------"
@@ -44,10 +42,7 @@ teardown() {
 }
 
 
-#
-# bootstrapping tests
-#
-
+# test bootstrapping
 test_bootstrap() {
   teardown
   
@@ -55,118 +50,102 @@ test_bootstrap() {
   url="file://$(pwd)/../vpkgfile"
   echo "downloading $url..."
   vpkgfile="$(curl -f# "$url")"
-  check "download vpkgfile"
+  tap "download vpkgfile"
   
   # bootstrap
   mkdir tmp
   echo "$vpkgfile" | bash -s bootstrap "$(pwd)"/tmp
-  check "bootstrap - create dirs and config"
+  tap "bootstrap - create dirs and config"
   
   # source fresh config
   source tmp/.vpkg
-  check "bootstrap - validate config"
+  tap "bootstrap - validate config"
   
   # check our binary linked properly
   test $(which vpkg) = "$VPKG_ROOT/bin/vpkg"
-  check "bootstrap - test vpkg link"
+  tap "bootstrap - test vpkg link"
   
   # include the vpkg function library
   source tmp/lib/vpkg/versions/current/lib/functions
-  check "bootstrap - include vpkg function library"
+  tap "bootstrap - include vpkg function library"
 }
 
-
-#
 # vpkgfile tests
-#
-
-setup_vpkgfile_tests() {
+test_vpkgfile() {
   fixture_name="nodejs"
   fixture_version_main="0.8.20"
   fixture_version_alt="0.9.9"
   fixture_bin="node"
-}
 
-test_vpkgfile_install() {
-  echo "file://$(pwd)/fixtures/$fixture_name-vpkgfile" | vpkg install "$fixture_name"
-  check "install $fixture_name"
-}
+  # install
+  echo "file://$(pwd)/fixtures/$fixture_name/vpkgfile" | vpkg install "$fixture_name"
+  tap "install $fixture_name"
 
-test_vpkgfile_link() {
+  # link
   vpkg link "$fixture_name" "$fixture_version_main"
-  check "link $fixture_name $fixture_version_main"
+  tap "link $fixture_name $fixture_version_main"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_main"
-  check "check link version $v = $fixture_version_main"
-}
+  tap "check link version $v = $fixture_version_main"
 
-test_vpkgfile_alt_install() {
+  # install atl version
   vpkg install "$fixture_name" "$fixture_version_alt"
-  check "install $fixture_name $fixture_version_alt"
-}
+  tap "install $fixture_name $fixture_version_alt"
 
-test_vpkgfile_use() {
-  vpkg_use "$fixture_name" "$fixture_version_alt"
-  check "vpkg_use $fixture_name $fixture_version_alt"
+  # use
+  vpkg-use "$fixture_name" "$fixture_version_alt"
+  tap "vpkg_use $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_alt"
-  check "check link version $v = $fixture_version_alt"
-}
+  tap "check link version $v = $fixture_version_alt"
  
-test_vpkgfile_unuse() {
-  vpkg_unuse "$fixture_name" "$fixture_version_alt"
-  check "vpkg_unuse $fixture_name $fixture_version_alt"
+  # unuse
+  vpkg-unuse "$fixture_name" "$fixture_version_alt"
+  tap "vpkg_unuse $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_main"
-  check "check link version $v = $fixture_version_main"
-}
+  tap "check link version $v = $fixture_version_main"
 
-test_vpkgfile_uninstall() {
+  # uninstall / unlink
   vpkg uninstall "$fixture_name" "$fixture_version_main"
-  check "uninstall $fixture_name $fixture_version_main"
+  tap "uninstall $fixture_name $fixture_version_main"
   test ! -e "$VPKG_ROOT"/bin/"$fixture_bin"
-  check "bin link was removed"
+  tap "bin link was removed"
   test ! -e "$VPKG_ROOT"/lib/"$fixture_name"/versions/current
-  check "version link was removed"
+  tap "version link was removed"
   test ! -e "$VPKG_ROOT"/lib/"$fixture_name"/versions/"$fixture_version_main"
-  check "version $fixture_version_main was uninstalled"
-}
-
-test_vpkgfile_link_alt() {
+  tap "version $fixture_version_main was uninstalled"
+  
+  # link alt
   vpkg link "$fixture_name" "$fixture_version_alt"
-  check "link $fixture_name $fixture_version_alt"
+  tap "link $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
   test "$v" = "$fixture_version_alt"
-  check "check link version $v = $fixture_version_alt"
+  tap "check link version $v = $fixture_version_alt"
 }
 
+# sans vpkgfile
+test_no_vpkgfile() {
+  fixture_name="no-vpkgfile"
+  fixture_version="0.0.1"
+  fixture_version_alt="0.0.2"
+  
+  # setup
+  pkg="$VPKG_ROOT"/lib/"$fixture_name"
+  mkdir -p "$pkg"
+  cp -R fixtures/"$fixture_name" "$pkg"/src
+  tap "copy no-vpkgfile src into lib"
+}
 
-#
-# no vpkgfile tests
-#
-
-# TODO...
-
-
-#
-# run the tests
-#
 
 # test bootstrapping
 test_bootstrap
 
-# nodejs requires only simple vpkgfile so 
-# we'll use that package for our main tests
-setup_vpkgfile_tests
+# test a package with a vpkgfile
+test_vpkgfile
 
-# vpkgfile tests
-test_vpkgfile_install
-test_vpkgfile_link
-test_vpkgfile_alt_install
-test_vpkgfile_use
-test_vpkgfile_unuse
-test_vpkgfile_uninstall  # this also tests unlink...
-test_vpkgfile_link_alt
+# test a package with no vpkgfile
+test_no_vpkgfile
 
-# display a summary
-summary
+# display a summary if we made it this far
+summarize

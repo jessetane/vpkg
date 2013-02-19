@@ -1,30 +1,70 @@
+#!/usr/bin/env bash
 #
 # vpkg
 #
+# the functions in this file should
+# never be called directly - always
+# use the form: "vpkg-<command>"
+#
 
-# go to own dir
-dir="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+# exporter
+__vpkg_export() {
+  local f
+  for f in "$@"
+  do
+    eval "vpkg-$f() {
+      __vpkg_module \"__vpkg_$f\" "'"$@"'"; 
+    }"
+  done
+}
 
-# where should we put these default vars...?
-[ -z "$VPKG_BUILD_FILE" ] && VPKG_BUILD_FILE="vpkgfile"
-[ -z "$VPKG_LINK_NAME" ] && VPKG_LINK_NAME="current"
+# export public functions as vpkg-<command>
+__vpkg_export "version"\
+              "lookup"\
+              "install"\
+              "uninstall"\
+              "link"\
+              "unlink"\
+              "use"\
+              "unuse"
 
-vpkg_version() {
+# private module scope
+__vpkg_module() {
+  
+  # args
+  local cmd="$1"
+  local name="$2"
+  local version="$3"
+  local sourceVersion="$4"
+  
+  # these could probably be hardcoded..
+  local vpkg_build_file="vpkgfile"
+  local vpkg_link_name="current"
+  
+  # vars
+  local pkg="$VPKG_ROOT"/lib/"$name"
+  local src="$pkg"/src
+  local versions="$pkg"/versions
+  local bin="$versions/$version"/bin
+  
+  # common validation
+  if [ "$cmd" != "__vpkg_version" ] 
+  then
+    [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
+    [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
+    [ -n "$version" ] && [ "$version" = "$vpkg_link_name" ] && echo "$vpkg_link_name is a reserved version name" >&2 && return 1
+  fi
+  
+  # proxy to command
+  "$cmd" "${@:2}"
+}
+
+__vpkg_version() {
+  local dir="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"  # own dir
   echo "$(basename "$(dirname "$dir")")"
 }
 
-vpkg_validate() {
-  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
-  [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
-  [ -n "$version" ] && [ "$version" = "$VPKG_LINK_NAME" ] && echo "$VPKG_LINK_NAME is a reserved version name" >&2 && return 1
-  return 0
-}
-
-vpkg_lookup() {
-  local name="$1"
-  
-  # validate
-  ! vpkg_validate && return 1
+__vpkg_lookup() {
   
   # TODO: lookup formula location from a package registry?
   # formula_location=""
@@ -39,147 +79,125 @@ vpkg_lookup() {
   echo "$formula_location"
 }
 
-vpkg_install() {
-  local name="$1"
-  local version="$2"
-  local pkg="$VPKG_ROOT"/lib/"$name"
-  local src="$pkg"/src
-  
-  # validate
-  ! vpkg_validate && return 1
+__vpkg_install() {
   
   # if we don't have any source files
+  # we should try to lookup a vpkg_build_file
   if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
   then
-    url="$(vpkg_lookup "$name")"
+    url="$(vpkg-lookup "$name")"
     mkdir -p "$src"
     echo "downloading $url..."
-    curl -f# "$url" -o "$src"/"$VPKG_BUILD_FILE"
+    curl -f# "$url" -o "$src"/"$vpkg_build_file"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
-    chmod +x "$src"/"$VPKG_BUILD_FILE"
   fi
   
   # only allow unspecified version if we don't have any versions already installed
   if [ -z "$version" ]
   then
-    [ -e "$pkg"/versions ] && versions="$(ls "$pkg/versions")"
-    [ -n "$versions" ] && echo "version(s) $versions are already installed" >&2 && return 0
+    [ -e "$versions" ] && local installed="$(ls "$versions")"
+    [ -n "$installed" ] && echo -e "version(s): $installed are already installed" >&2 && return 0
   fi
   
   # is $version already installed?
-  [ -e "$pkg"/versions/"$version" ] && echo "version $version is already installed" >&2 && return 1
+  [ -e "$versions"/"$version" ] && echo "version $version is already installed" >&2 && return 1
   
   # uninstall and unlink any old versions
-  vpkg_uninstall "$name" "$version" > /dev/null 2>&1
+  vpkg-uninstall "$name" "$version" > /dev/null 2>&1
   
-  # we have source files but no VPKG_BUILD_FILE
-  if [ ! -e "$src"/"$VPKG_BUILD_FILE" ]
+  # we have source files but no vpkg_build_file
+  if [ ! -e "$src"/"$vpkg_build_file" ]
   then
   
-    # require a version if installing sans VPKG_BUILD_FILE
-    [ -z "$version" ] && echo "installing without a $VPKG_BUILD_FILE requires you to specify a version" >&2 && return 1
+    # require a version if installing sans vpkg_build_file
+    [ -z "$version" ] && echo "installing without a $vpkg_build_file requires you to specify a version" >&2 && return 1
     
-    # copy $src over into versions/
-    cp -R "$src" "$pkg"/versions/"$version"
+    # TODO anything speshal for git, svn?
+    # for now just copy $src over into versions/
+    cp -R "$src" "$versions"/"$version"
     
-  # we have source files and VPKG_BUILD_FILE
+  # we have source files and vpkg_build_file
   else
     
-    # install using 
-    bash "$src"/"$VPKG_BUILD_FILE" install "$@"
+    # install using
+    bash "$src"/"$vpkg_build_file" install "$@"
   fi
 }
 
-vpkg_uninstall() {
-  local name="$1"
-  local version="$2"
+__vpkg_uninstall() {
   
   # validate
-  ! vpkg_validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
   # unlink if necessary
-  vpkg_unlink "$name" "$version" > /dev/null 2>&1
+  vpkg-unlink "$name" "$version" > /dev/null 2>&1
   
   # wipe out the lib entry
-  rm -rf "$VPKG_ROOT"/lib/"$name"/versions/"$version"
+  rm -rf "$versions"/"$version"
 }
 
-vpkg_link() {
-  local name="$1"
-  local version="$2"
-  local pkg="$VPKG_ROOT"/lib/"$name"
+__vpkg_link() {
   
   # validate
-  ! vpkg_validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
-  [ ! -e "$pkg"/versions/"$version" ] && echo "version $version is not installed" >&2 && return 1
+  [ ! -e "$versions"/"$version" ] && echo "version $version is not installed" >&2 && return 1
   
   # unlink if necessary
-  vpkg_unlink "$name" "$version" > /dev/null 2>&1
+  vpkg-unlink "$name" > /dev/null 2>&1
   
   # create link
-  ln -s "$pkg"/versions/"$version" "$pkg"/versions/"$VPKG_LINK_NAME"
+  ln -s "$versions"/"$version" "$versions"/"$vpkg_link_name"
   
-  # create exectuables
-  ls "$pkg"/versions/"$version"/bin | while read bin
+  # create executables
+  local executable
+  ls "$bin" | while read executable
   do
     
     # link via exec
-    local dest="$VPKG_ROOT"/bin/"$bin"
-    echo "exec $pkg/versions/$version/bin/$bin "'$@' > "$dest"
+    local dest="$VPKG_ROOT"/bin/"$executable"
+    echo "exec $bin/$executable "'$@' > "$dest"
     chmod +x "$dest"
   done
 }
 
-vpkg_unlink() {
-  local name="$1"
-  local version="$2"
-  local pkg="$VPKG_ROOT"/lib/"$name"
+__vpkg_unlink() {
+  local old_link="$(readlink "$versions"/"$vpkg_link_name")"
   
-  # validate
-  ! vpkg_validate && return 1
-  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
-  
-  # is the version linked?
-  [ "$(readlink "$pkg/versions/$VPKG_LINK_NAME")" != "$pkg/versions/$version" ] && echo "version $version is not linked" >&2 && return 1
+  # if a version was specified, check to ensure that version is actually linked
+  if [ -n "$version" ] && [ "$old_link" != "$versions"/"$version" ]
+  then
+    echo "version $version is not linked" >&2
+    return 1
+  fi
   
   # remove link
-  rm -rf "$pkg"/versions/"$VPKG_LINK_NAME"
+  rm -rf "$versions"/"$vpkg_link_name"
   
-  # remove executables
-  ls "$pkg"/versions/"$version"/bin | while read bin
+  # remove old executables
+  ls "$old_link"/bin | while read bin
   do
     rm -rf "$VPKG_ROOT"/bin/"$bin"
   done
 }
 
-vpkg_use() {
-  local name="$1"
-  local version="$2"
-  local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
+__vpkg_use() {
 
   # validate
-  ! vpkg_validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   [ ! -e "$bin" ] && echo "version $version is not installed" >&2 && return 1
 
   # unuse old versions
-  vpkg_unuse "$name" "$version"
+  vpkg-unuse "$name"
 
   # use new version
   export PATH="$bin":$PATH
 }
 
-vpkg_unuse() {
-  local name="$1"
-  local version="$2"
-  local bin="$VPKG_ROOT"/lib/"$name"/versions/"$version"/bin
+__vpkg_unuse() {
 
-  # validate
-  ! vpkg_validate && return 1
-  [ -z "$version" ] && echo "please specify a version" >&2 && return 1
+  # if version wasn't specified, match any
+  [ -z "$version" ] && version="[^/]*"
   
   # remove all old versions
-  export PATH="$(echo "$PATH" | sed "s|$VPKG_ROOT/lib/$name/versions/[^/]*/bin:||g")"
+  export PATH="$(echo "$PATH" | sed "s|$versions/$version/bin:||g")"
 }

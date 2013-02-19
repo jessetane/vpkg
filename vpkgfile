@@ -1,5 +1,6 @@
+#!/usr/bin/env bash
 #
-# make
+# vpkgfile
 #
 
 # repo location
@@ -102,8 +103,8 @@ bootstrap() {
   "$bin" link "$name" "$version"
 }
 
-# require at least a command
-[ -z "$1" ] && echo "please specify a command" >&2 && exit 127
+# require at least one argument
+[ "$#" = 0 ] && echo "please specify a command" >&2 && exit 127
 
 # run
 "$1" "${@:2}"

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # vpkg
 #
@@ -11,19 +12,19 @@ source ../lib/functions
 # run
 case "$1" in
   "install" )
-    vpkg_install "${@:2}"
+    vpkg-install "${@:2}"
     ;;
   "uninstall" )
-    vpkg_uninstall "${@:2}"
+    vpkg-uninstall "${@:2}"
     ;;
   "link" )
-    vpkg_link "${@:2}"
+    vpkg-link "${@:2}"
     ;;
   "unlink" )
-    vpkg_unlink "${@:2}"
+    vpkg-unlink "${@:2}"
     ;;
   "-v"|"--version"|"version" )
-    vpkg_version
+    vpkg-version
     ;;
   * )
     echo "$1: command not found" >&2 && exit 1
