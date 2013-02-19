@@ -9,7 +9,7 @@ cd "$(dirname "$BASH_SOURCE")"
 t=0
 
 check() {
-  if [ $? == 0 ]
+  if [ $? = 0 ]
   then
     echo "✔  passed test #$((t++)): $1"
   else
@@ -26,7 +26,9 @@ test_bootstrap() {
   teardown
   
   # download vpkgfile
-  vpkgfile="$(curl "file://$(pwd)/../vpkgfile")" 
+  url="file://$(pwd)/../vpkgfile"
+  echo "downloading $url..."
+  vpkgfile="$(curl -f# "$url")"
   check "download vpkgfile"
   
   # bootstrap
@@ -55,8 +57,9 @@ test_install() {
 test_link() {
   vpkg link "$fixture_name" "$fixture_version_main"
   check "link $fixture_name $fixture_version_main"
-  test "$("$fixture_bin" --version)" = "$fixture_version_main"
-  check "link version $fixture_version_main"
+  v="$("$fixture_bin" --version)"
+  test "$v" = "$fixture_version_main"
+  check "link version was: $v, should be: $fixture_version_main"
 }
 
 test_alt_install() {
@@ -112,5 +115,5 @@ test_link
 test_alt_install
 test_use
 test_unuse
-test_uninstall
+test_uninstall  # this also tests unlink...
 test_link_alt
