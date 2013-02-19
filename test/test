@@ -9,6 +9,11 @@ cd "$(dirname "$BASH_SOURCE")"
 t=1
 expected=19
 
+
+#
+# helpers
+#
+
 check() {
   if [ $? = 0 ]
   then
@@ -38,6 +43,11 @@ teardown() {
   rm -rf tmp
 }
 
+
+#
+# bootstrapping tests
+#
+
 test_bootstrap() {
   teardown
   
@@ -65,12 +75,24 @@ test_bootstrap() {
   check "bootstrap - include vpkg function library"
 }
 
-test_install() {
+
+#
+# vpkgfile tests
+#
+
+setup_vpkgfile_tests() {
+  fixture_name="nodejs"
+  fixture_version_main="0.8.20"
+  fixture_version_alt="0.9.9"
+  fixture_bin="node"
+}
+
+test_vpkgfile_install() {
   echo "file://$(pwd)/fixtures/$fixture_name-vpkgfile" | vpkg install "$fixture_name"
   check "install $fixture_name"
 }
 
-test_link() {
+test_vpkgfile_link() {
   vpkg link "$fixture_name" "$fixture_version_main"
   check "link $fixture_name $fixture_version_main"
   v="$("$fixture_bin" --version | clean_version)"
@@ -78,12 +100,12 @@ test_link() {
   check "check link version $v = $fixture_version_main"
 }
 
-test_alt_install() {
+test_vpkgfile_alt_install() {
   vpkg install "$fixture_name" "$fixture_version_alt"
   check "install $fixture_name $fixture_version_alt"
 }
 
-test_use() {
+test_vpkgfile_use() {
   vpkg_use "$fixture_name" "$fixture_version_alt"
   check "vpkg_use $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
@@ -91,7 +113,7 @@ test_use() {
   check "check link version $v = $fixture_version_alt"
 }
  
-test_unuse() {
+test_vpkgfile_unuse() {
   vpkg_unuse "$fixture_name" "$fixture_version_alt"
   check "vpkg_unuse $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
@@ -99,7 +121,7 @@ test_unuse() {
   check "check link version $v = $fixture_version_main"
 }
 
-test_uninstall() {
+test_vpkgfile_uninstall() {
   vpkg uninstall "$fixture_name" "$fixture_version_main"
   check "uninstall $fixture_name $fixture_version_main"
   test ! -e "$VPKG_ROOT"/bin/"$fixture_bin"
@@ -110,7 +132,7 @@ test_uninstall() {
   check "version $fixture_version_main was uninstalled"
 }
 
-test_link_alt() {
+test_vpkgfile_link_alt() {
   vpkg link "$fixture_name" "$fixture_version_alt"
   check "link $fixture_name $fixture_version_alt"
   v="$("$fixture_bin" --version | clean_version)"
@@ -118,24 +140,33 @@ test_link_alt() {
   check "check link version $v = $fixture_version_alt"
 }
 
+
+#
+# no vpkgfile tests
+#
+
+# TODO...
+
+
+#
+# run the tests
+#
+
 # test bootstrapping
 test_bootstrap
 
 # nodejs requires only simple vpkgfile so 
 # we'll use that package for our main tests
-fixture_name="nodejs"
-fixture_version_main="0.8.20"
-fixture_version_alt="0.9.9"
-fixture_bin="node"
+setup_vpkgfile_tests
 
-# main tests
-test_install
-test_link
-test_alt_install
-test_use
-test_unuse
-test_uninstall  # this also tests unlink...
-test_link_alt
+# vpkgfile tests
+test_vpkgfile_install
+test_vpkgfile_link
+test_vpkgfile_alt_install
+test_vpkgfile_use
+test_vpkgfile_unuse
+test_vpkgfile_uninstall  # this also tests unlink...
+test_vpkgfile_link_alt
 
 # display a summary
 summary
