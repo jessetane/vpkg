@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #
 # test
 #
@@ -7,7 +8,7 @@ cd "$(dirname "$BASH_SOURCE")"
 
 # vars to keep track of number of tests run
 t=1
-expected=20
+expected=29
 
 # some helpers
 
@@ -23,11 +24,11 @@ tap() {
   ((t++))
 }
 
-clean_version() {
-  while read data
-  do
-    echo "$data" | sed "s/[^0-9]*\(.*\)/\1/"
-  done
+check_version() {
+  # strip version of leading, non-number characters
+  v="$(echo "$1" | sed "s/[^0-9]*\(.*\)/\1/")"
+  test "$v" = "$2"
+  tap "$v = $2 - $3"
 }
 
 summarize() {
@@ -72,71 +73,87 @@ test_bootstrap() {
 
 # vpkgfile tests
 test_vpkgfile() {
-  fixture_name="nodejs"
-  fixture_version_main="0.8.20"
-  fixture_version_alt="0.9.9"
-  fixture_bin="node"
-
-  # install
-  echo "file://$(pwd)/fixtures/$fixture_name/vpkgfile" | vpkg install "$fixture_name"
-  tap "install $fixture_name"
-
-  # link
-  vpkg link "$fixture_name" "$fixture_version_main"
-  tap "link $fixture_name $fixture_version_main"
-  v="$("$fixture_bin" --version | clean_version)"
-  test "$v" = "$fixture_version_main"
-  tap "check link version $v = $fixture_version_main"
-
-  # install atl version
-  vpkg install "$fixture_name" "$fixture_version_alt"
-  tap "install $fixture_name $fixture_version_alt"
-
-  # use
-  vpkg-use "$fixture_name" "$fixture_version_alt"
-  tap "vpkg_use $fixture_name $fixture_version_alt"
-  v="$("$fixture_bin" --version | clean_version)"
-  test "$v" = "$fixture_version_alt"
-  tap "check link version $v = $fixture_version_alt"
- 
-  # unuse
-  vpkg-unuse "$fixture_name" "$fixture_version_alt"
-  tap "vpkg_unuse $fixture_name $fixture_version_alt"
-  v="$("$fixture_bin" --version | clean_version)"
-  test "$v" = "$fixture_version_main"
-  tap "check link version $v = $fixture_version_main"
-
-  # uninstall / unlink
-  vpkg uninstall "$fixture_name" "$fixture_version_main"
-  tap "uninstall $fixture_name $fixture_version_main"
-  test ! -e "$VPKG_ROOT"/bin/"$fixture_bin"
-  tap "bin link was removed"
-  test ! -e "$VPKG_ROOT"/lib/"$fixture_name"/versions/current
-  tap "version link was removed"
-  test ! -e "$VPKG_ROOT"/lib/"$fixture_name"/versions/"$fixture_version_main"
-  tap "version $fixture_version_main was uninstalled"
   
-  # link alt
-  vpkg link "$fixture_name" "$fixture_version_alt"
-  tap "link $fixture_name $fixture_version_alt"
-  v="$("$fixture_bin" --version | clean_version)"
-  test "$v" = "$fixture_version_alt"
-  tap "check link version $v = $fixture_version_alt"
+  # install
+  echo "file://$(pwd)/fixtures/nodejs/vpkgfile" | vpkg install nodejs
+  tap "install nodejs"
+  
+  # install alt
+  vpkg install nodejs 0.8.6
+  tap "install nodejs 0.8.6"
+  
+  # install custom
+  vpkg install nodejs development 0.9.9
+  tap "install nodejs custom version 'development' from 0.9.9"
+  
+  # link
+  vpkg link nodejs 0.8.6
+  tap "link nodejs 0.8.6"
+  check_version "$(node -v)" "0.8.6" "check link version"
+  test $(which node) = "$VPKG_ROOT"/bin/node
+  tap "confirm link"
+  
+  # link
+  vpkg link nodejs development
+  tap "link nodejs development (0.9.9)"
+  check_version "$(node -v)" "0.9.9" "check link version"
+  test ! -e "$VPKG_ROOT"/bin/node-waf
+  tap "confirm 0.8.6 was unlinked (0.9.9 does not include node-waf)"
+  
+  # use
+  vpkg-use nodejs 0.8.20
+  tap "use nodejs 0.8.20"
+  check_version "$(node -v)" "0.8.20" "check use version"
+
+  # unuse
+  vpkg-unuse nodejs 0.8.20
+  tap "unuse nodejs 0.8.20"
+  check_version "$(node -v)" "0.9.9" "check unuse version"
+  
+  # uninstall
+  vpkg uninstall nodejs development
+  tap "uninstall nodejs development"
+  test $(which node) != "$VPKG_ROOT"/bin/node
+  tap "confirm uninstall also unlinked"
+  
+  # link again
+  vpkg link nodejs 0.8.6
+  tap "relink nodejs 0.8.6"
+  
+  # test version specify unlink
+  vpkg unlink nodejs 0.8.6
+  tap "unlink nodejs 0.8.6"
+  test $(which node) != "$VPKG_ROOT"/bin/node
+  tap "confirm unlink"
+  
+  # leave nodejs 0.8.20 linked
+  vpkg link nodejs 0.8.20
+  tap "relink nodejs 0.8.20"
 }
 
 # sans vpkgfile
-test_no_vpkgfile() {
-  fixture_name="no-vpkgfile"
-  fixture_version="0.0.1"
-  fixture_version_alt="0.0.2"
+test_raw() {
   
-  # setup
-  pkg="$VPKG_ROOT"/lib/"$fixture_name"
+  # setup (pretend we created this package by hand)
+  pkg="$VPKG_ROOT"/lib/raw-src
   mkdir -p "$pkg"
-  cp -R fixtures/"$fixture_name" "$pkg"/src
-  tap "copy no-vpkgfile src into lib"
+  cp -R fixtures/raw-src "$pkg"/src
+  
+  # install
+  vpkg install raw-src 0.0.1
+  tap "install raw-src 0.0.1"
+  
+  # alt
+  vpkg install raw-src 0.0.2
+  tap "install raw-src 0.0.2"
+  
+  # link 
+  vpkg link raw-src 0.0.1
+  tap "link raw-src 0.0.1"
+  check_version "$(raw-src --version)" "0.0.1" "check link version"
+  test $(which raw-src) = "$VPKG_ROOT"/bin/raw-src
+  tap "confirm link"
 }
-
 
 # test bootstrapping
 test_bootstrap
@@ -145,7 +162,7 @@ test_bootstrap
 test_vpkgfile
 
 # test a package with no vpkgfile
-test_no_vpkgfile
+test_raw
 
 # display a summary if we made it this far
 summarize

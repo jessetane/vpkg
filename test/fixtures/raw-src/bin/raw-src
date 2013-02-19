@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#	no-vpkgfile
+#	raw-src (no vpkgfile)
 #
 
 # own dir
@@ -10,8 +10,8 @@ cd "$(dirname "$BASH_SOURCE")"
 if [ "$1" = "--version" ]
 then
   echo "$(basename "$(dirname "$(pwd)")")"
-  return 0
+  exit 0
 fi
 
 # if we made it this far, say hello
-echo "hello from a package with no vpkgfile"
+echo "hello from raw-src: a package with no vpkgfile"

@@ -60,8 +60,7 @@ __vpkg_module() {
 }
 
 __vpkg_version() {
-  local dir="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"  # own dir
-  echo "$(basename "$(dirname "$dir")")"
+  echo "0.0.2"
 }
 
 __vpkg_lookup() {
@@ -100,10 +99,12 @@ __vpkg_install() {
   then
     local installed="$(ls "$versions")"
     [ -n "$installed" ] && echo -e "version(s): $installed are already installed" >&2 && return 0
-  fi
   
-  # is $version already installed?
-  [ -e "$versions"/"$version" ] && echo "version $version is already installed" >&2 && return 1
+  # if version was specified, check to be sure it doesn't exist
+  elif [ -e "$versions"/"$version" ]
+  then
+    echo "version $version is already installed" >&2 && return 1
+  fi
   
   # uninstall and unlink any old versions
   vpkg-uninstall "$name" "$version" > /dev/null 2>&1
@@ -145,7 +146,7 @@ __vpkg_link() {
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   [ ! -e "$versions"/"$version" ] && echo "version $version is not installed" >&2 && return 1
   
-  # unlink if necessary
+  # unlink
   vpkg-unlink "$name" > /dev/null 2>&1
   
   # create link
