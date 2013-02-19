@@ -162,7 +162,7 @@ vpkg_use() {
   # validate
   ! vpkg_validate && return 1
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
-  [ ! -e "$bin" ] echo "version $version is not installed" >&2 && return 1
+  [ ! -e "$bin" ] && echo "version $version is not installed" >&2 && return 1
 
   # unuse old versions
   vpkg_unuse "$name" "$version"
