@@ -7,6 +7,7 @@ cd "$(dirname "$BASH_SOURCE")"
 
 # vars
 t=0
+expected=18
 
 check() {
   if [ $? = 0 ]
@@ -14,6 +15,7 @@ check() {
     echo "✔  passed test #$((t++)): $1"
   else
     echo "✘  failed test #$((t++)): $1" >&2
+    summary
     exit 1
   fi
 }
@@ -23,6 +25,13 @@ clean_version() {
   do
     echo "$data" | sed "s/[^0-9]*\(.*\)/\1/"
   done
+}
+
+summary() {
+  [ $t != $expected ] && status="failure" || status="success"
+  echo ""
+  echo "---------------- $status ------------------"
+  echo "$t of $expected tests passed"
 }
 
 teardown() {
@@ -127,3 +136,6 @@ test_use
 test_unuse
 test_uninstall  # this also tests unlink...
 test_link_alt
+
+# display a summary
+summary

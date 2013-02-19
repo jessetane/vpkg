@@ -12,6 +12,24 @@ bail() {
   exit 1
 }
 
+gen_config() {
+  name="$1"
+  uppercase_name="$(echo "$name" | awk '{ print toupper($1) }')"
+  echo '#
+# .'"$name"'
+#
+
+# get root
+root="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
+
+# pkg root
+export '"$uppercase_name"'_ROOT="$root"
+
+# add bin to PATH
+export PATH="$'"$uppercase_name"'_ROOT"/bin:"$PATH"
+'
+}
+
 common() {
   
   # require $VPKG_ROOT
@@ -72,7 +90,7 @@ bootstrap() {
   gen_config "$name" > "$root/.$name"
 
   # source the config file
-  . "$root/.$name"
+  source "$root/.$name"
   
   # install default version of self
   install "$name" "$version"
@@ -82,24 +100,6 @@ bootstrap() {
   
   # how meta: use the vpkg tool to link itself...
   "$bin" link "$name" "$version"
-}
-
-gen_config() {
-  name="$1"
-  uppercase_name="$(echo "$name" | awk '{ print toupper($1) }')"
-  echo '#
-# .'"$name"'
-#
-
-# get root
-root="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
-
-# pkg root
-export '"$uppercase_name"'_ROOT="$root"
-
-# add bin to PATH
-export PATH="$'"$uppercase_name"'_ROOT"/bin:"$PATH"
-'
 }
 
 # require at least a command
