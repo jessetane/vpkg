@@ -6,8 +6,8 @@
 cd "$(dirname "$BASH_SOURCE")"
 
 # vars
-t=0
-expected=18
+t=1
+expected=19
 
 check() {
   if [ $? = 0 ]
@@ -28,9 +28,9 @@ clean_version() {
 }
 
 summary() {
-  [ $t != $expected ] && status="failure" || status="success"
+  [ $((--t)) = $expected ] && status="success" || status="failure"
   echo ""
-  echo "---------------- $status ------------------"
+  echo "------------------ $status ------------------"
   echo "$t of $expected tests passed"
 }
 
