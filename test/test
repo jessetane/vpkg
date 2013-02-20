@@ -63,7 +63,7 @@ test_bootstrap() {
   tap "bootstrap - validate config"
   
   # check our binary linked properly
-  test $(which vpkg) = "$VPKG_ROOT/bin/vpkg"
+  test "$(which vpkg)" = "$VPKG_ROOT/bin/vpkg"
   tap "bootstrap - test vpkg link"
   
   # include the vpkg function library
@@ -90,7 +90,7 @@ test_vpkgfile() {
   vpkg link nodejs 0.8.6
   tap "link nodejs 0.8.6"
   check_version "$(node -v)" "0.8.6" "check link version"
-  test $(which node) = "$VPKG_ROOT"/bin/node
+  test "$(which node)" = "$VPKG_ROOT"/bin/node
   tap "confirm link"
   
   # link
@@ -113,7 +113,7 @@ test_vpkgfile() {
   # uninstall
   vpkg uninstall nodejs development
   tap "uninstall nodejs development"
-  test $(which node) != "$VPKG_ROOT"/bin/node
+  test "$(which node)" != "$VPKG_ROOT"/bin/node
   tap "confirm uninstall also unlinked"
   
   # link again
@@ -123,7 +123,7 @@ test_vpkgfile() {
   # test version specify unlink
   vpkg unlink nodejs 0.8.6
   tap "unlink nodejs 0.8.6"
-  test $(which node) != "$VPKG_ROOT"/bin/node
+  test "$(which node)" != "$VPKG_ROOT"/bin/node
   tap "confirm unlink"
   
   # leave nodejs 0.8.20 linked
@@ -151,7 +151,7 @@ test_raw() {
   vpkg link raw-src 0.0.1
   tap "link raw-src 0.0.1"
   check_version "$(raw-src --version)" "0.0.1" "check link version"
-  test $(which raw-src) = "$VPKG_ROOT"/bin/raw-src
+  test "$(which raw-src)" = "$VPKG_ROOT"/bin/raw-src
   tap "confirm link"
 }
 
