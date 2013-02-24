@@ -112,7 +112,7 @@ __vpkg_install() {
     install() {
       
       # require version
-      if [ -z "$version" ] && echo "please specify a version" >&2 && exit 1
+      [ -z "$version" ] && echo "please specify a version" >&2 && exit 1
       
       # just copy the src over into versions
       cp -R "$src" "$versions"/"$version"
