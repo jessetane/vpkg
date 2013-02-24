@@ -7,23 +7,26 @@
 # use the form: "vpkg-<command>"
 #
 
-# public functions
-__vpkg_exports="version
-lookup
-install
-uninstall
-link
-unlink
-use
-unuse"
+# exporter
+__vpkg_export() {
+  local f
+  for f in "$@"
+  do
+    eval "vpkg-$f() {
+      __vpkg_module \"__vpkg_$f\" "'"$@"'"; 
+    }"
+  done
+}
 
-# expose public functions as: vpkg-<command>
-for __vpkg_export in "$__vpkg_exports"
-do
-  eval "vpkg-$__vpkg_export() {
-    __vpkg_module \"__vpkg_$__vpkg_export\" "'"$@"'";
-  }"
-done
+# export public functions as vpkg-<command>
+__vpkg_export "version"\
+              "lookup"\
+              "install"\
+              "uninstall"\
+              "link"\
+              "unlink"\
+              "use"\
+              "unuse"
 
 # private module scope
 __vpkg_module() {
