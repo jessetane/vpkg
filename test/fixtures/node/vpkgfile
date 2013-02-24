@@ -3,6 +3,8 @@
 # vpkgfile for node
 #
 
+default_version="0.8.20"
+
 common() {
   
   # args
@@ -47,9 +49,3 @@ install() {
   mkdir -p versions
   cp -R "$src/$sourceVersion" versions/"$version"
 }
-
-# vars
-default_version="0.8.20"
-
-# run
-"$1" "${@:2}"

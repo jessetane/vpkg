@@ -55,7 +55,10 @@ test_bootstrap() {
   
   # bootstrap
   mkdir tmp
-  echo "$vpkgfile" | bash -s bootstrap "$(pwd)"/tmp
+  (
+    eval "$vpkgfile"
+    bootstrap "$(pwd)"/tmp
+  )
   tap "bootstrap - create dirs and config"
   
   # source fresh config

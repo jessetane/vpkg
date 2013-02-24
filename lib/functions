@@ -75,18 +75,6 @@ __vpkg_lookup() {
   echo "$formula_location"
 }
 
-__vpkg_hook() {
-  
-  # dry run
-  "$src"/"$vpkg_hook_file" "$1" > /dev/null 2>&1
-  
-  # 127 exit code means no hook was found
-  if [ "$?" != 127 ]
-  then
-    "$src"/"$vpkg_hook_file" "$1" "${@:2}"
-  fi
-}
-
 __vpkg_install() {
   
   # if we don't have any source files
@@ -118,23 +106,22 @@ __vpkg_install() {
   # uninstall and unlink any old versions
   vpkg-uninstall "$name" "$version" > /dev/null 2>&1
   
-  # flag
-  needs_install=true
-  
-  # check for hook
-  __vpkg_hook install "$@"
-  needs_install="$?"
-  
-  # install manually if necessary
-  if [ needs_install = true ]
-  then
-  
-    # require a version
-    if [ -z "$version" ] && echo "installing without a $vpkg_hook_file requires you to specify a version" >&2 && return 1
-  
-    # just copy the src over into versions
-    cp -R "$src" "$versions"/"$version"
-  fi
+  # install
+  (
+    # fallback
+    install() {
+      
+      # require version
+      if [ -z "$version" ] && echo "please specify a version" >&2 && exit 1
+      
+      # just copy the src over into versions
+      cp -R "$src" "$versions"/"$version"
+    }
+    
+    # source hooks 
+    source "$src"/"$vpkg_hook_file"
+    install "$@"
+  )
 }
 
 __vpkg_uninstall() {
@@ -145,18 +132,19 @@ __vpkg_uninstall() {
   # unlink if necessary
   vpkg-unlink "$name" "$version" > /dev/null 2>&1
   
-  # flag
-  needs_uninstall=true
-  
-  # check for hook
-  __vpkg_hook uninstall "$@"
-  needs_uninstall="$?"
-  
-  # uninstall manually
-  if [ needs_uninstall = true ]
-  then
-    rm -rf "$versions"/"$version"
-  fi
+  # uninstall
+  (
+    # fallback
+    uninstall() {
+      
+      # just copy the src over into versions
+      rm -rf "$versions"/"$version"
+    }
+    
+    # source hooks
+    source "$src"/"$vpkg_hook_file"
+    uninstall "$@"
+  )
 }
 
 __vpkg_link() {
