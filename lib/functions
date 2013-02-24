@@ -35,7 +35,7 @@ __vpkg_module() {
   local sourceVersion="$4"
   
   # these could probably be hardcoded..
-  local vpkg_build_file="vpkgfile"
+  local vpkg_hook_file="vpkgfile"
   local vpkg_link_name="current"
   
   # vars
@@ -75,16 +75,28 @@ __vpkg_lookup() {
   echo "$formula_location"
 }
 
+__vpkg_hook() {
+  
+  # dry run
+  "$src"/"$vpkg_hook_file" "$1" > /dev/null 2>&1
+  
+  # 127 exit code means no hook was found
+  if [ "$?" != 127 ]
+  then
+    "$src"/"$vpkg_hook_file" "$1" "${@:2}"
+  fi
+}
+
 __vpkg_install() {
   
   # if we don't have any source files
-  # we should try to lookup a vpkg_build_file
+  # we should try to lookup a vpkg_hook_file
   if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
   then
     url="$(vpkg-lookup "$name")"
     mkdir -p "$src"
     echo "downloading $url..."
-    curl -f# "$url" -o "$src"/"$vpkg_build_file"
+    curl -f# "$url" -o "$src"/"$vpkg_hook_file"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
   fi
   
@@ -106,22 +118,22 @@ __vpkg_install() {
   # uninstall and unlink any old versions
   vpkg-uninstall "$name" "$version" > /dev/null 2>&1
   
-  # we have source files but no vpkg_build_file
-  if [ ! -e "$src"/"$vpkg_build_file" ]
+  # flag
+  needs_install=true
+  
+  # check for hook
+  __vpkg_hook install "$@"
+  needs_install="$?"
+  
+  # install manually if necessary
+  if [ needs_install = true ]
   then
   
-    # require a version if installing sans vpkg_build_file
-    [ -z "$version" ] && echo "installing without a $vpkg_build_file requires you to specify a version" >&2 && return 1
-    
-    # TODO anything speshal for git, svn?
-    # for now just copy $src over into versions/
+    # require a version
+    if [ -z "$version" ] && echo "installing without a $vpkg_hook_file requires you to specify a version" >&2 && return 1
+  
+    # just copy the src over into versions
     cp -R "$src" "$versions"/"$version"
-    
-  # we have source files and vpkg_build_file
-  else
-    
-    # install using
-    bash "$src"/"$vpkg_build_file" install "$@"
   fi
 }
 
@@ -133,8 +145,18 @@ __vpkg_uninstall() {
   # unlink if necessary
   vpkg-unlink "$name" "$version" > /dev/null 2>&1
   
-  # wipe out the lib entry
-  rm -rf "$versions"/"$version"
+  # flag
+  needs_uninstall=true
+  
+  # check for hook
+  __vpkg_hook uninstall "$@"
+  needs_uninstall="$?"
+  
+  # uninstall manually
+  if [ needs_uninstall = true ]
+  then
+    rm -rf "$versions"/"$version"
+  fi
 }
 
 __vpkg_link() {
