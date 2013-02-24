@@ -96,9 +96,5 @@ bootstrap() {
 default_version="0.0.3"
 repo="https://github.com/jessetane/vpkg"
 
-# args
-cmd="$1"
-args="${@:2}"
-
 # run
-"$cmd" "$args"
+"$1" "${@:2}"

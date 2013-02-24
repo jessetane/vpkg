@@ -51,9 +51,5 @@ install() {
 # vars
 default_version="0.8.20"
 
-# args
-cmd="$1"
-args="${@:2}"
-
 # run
-"$cmd" "$args"
+"$1" "${@:2}"
