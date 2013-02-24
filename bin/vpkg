@@ -6,27 +6,31 @@
 # go to own dir
 cd "$(dirname $BASH_SOURCE)"
 
+# vars
+cmd="$1"
+args="${@:2}"
+
 # include vpkg function library
 source ../lib/functions
 
 # run
-case "$1" in
-  "install" )
-    vpkg-install "${@:2}"
+case "$cmd" in
+  "install")
+    vpkg-install "$args"
     ;;
-  "uninstall" )
-    vpkg-uninstall "${@:2}"
+  "uninstall")
+    vpkg-uninstall "$args"
     ;;
-  "link" )
-    vpkg-link "${@:2}"
+  "link")
+    vpkg-link "$args"
     ;;
-  "unlink" )
-    vpkg-unlink "${@:2}"
+  "unlink")
+    vpkg-unlink "$args"
     ;;
-  "-v"|"--version"|"version" )
+  "-v"|"--version"|"version")
     vpkg-version
     ;;
-  * )
-    echo "$1: command not found" >&2 && exit 1
+  *)
+    echo "$cmd: command not found" >&2 && exit 1
     ;;
 esac
