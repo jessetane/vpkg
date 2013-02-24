@@ -3,47 +3,37 @@
 # vpkgfile
 #
 
-# repo location
-REPO_URL="https://github.com/jessetane/vpkg"
-DEFAULT_NAME="vpkg"
-DEFAULT_VERSION="0.0.2"
-
 bail() {
   echo "$1" >&2
   exit 1
 }
 
-gen_config() {
-  name="$1"
-  uppercase_name="$(echo "$name" | awk '{ print toupper($1) }')"
+gen_profile() {
   echo '#
-# .'"$name"'
+# .profile - you could source this from your user .profile
 #
 
-# get root
-root="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
-
 # pkg root
-export '"$uppercase_name"'_ROOT="$root"
+export VPKG_ROOT="'"$1"'"
 
 # add bin to PATH
-export PATH="$'"$uppercase_name"'_ROOT"/bin:"$PATH"
+export PATH="$VPKG_ROOT"/bin:"$PATH"
 '
 }
 
 common() {
-  
-  # require $VPKG_ROOT
-  [ -z "$VPKG_ROOT" ] && bail '$VPKG_ROOT must be defined'
   
   # args
   name="$1"
   version="$2"
   sourceVersion="$3"
   
+  # require $VPKG_ROOT
+  [ -z "$VPKG_ROOT" ] && bail '$VPKG_ROOT must be defined'
+  [ -z "$name" ] && bail '$name must be defined'
+  
   # defaults
-  [ -z "$name" ] && name="$DEFAULT_NAME"
-  [ -z "$version" ] && version="$DEFAULT_VERSION"
+  [ -z "$version" ] && version="$default_version"
   [ -z "$sourceVersion" ] && sourceVersion="$version"
 }
 
@@ -56,7 +46,7 @@ install() {
   src="$VPKG_ROOT"/lib/"$name"/src
   if [ ! -e "$src" ]
   then
-    git clone "$REPO_URL" "$src"
+    git clone "$repo" "$src"
   fi
   
   # update
@@ -76,8 +66,7 @@ bootstrap() {
   
   # args
   root="$1"
-  name="$DEFAULT_NAME"
-  version="$DEFAULT_VERSION"
+  name="vpkg"
   
   # default to pwd
   [ -z "$root" ] && bail "please specify a directory to bootstrap into"
@@ -86,12 +75,12 @@ bootstrap() {
   mkdir -p "$root"/bin
   mkdir -p "$root"/lib/"$name"
   
-  # autogenerate a sourceable config
+  # autogenerate a sourceable profile
   # file and just put it in the root
-  gen_config "$name" > "$root/.$name"
-
+  gen_profile "$root" > "$root/.profile"
+  
   # source the config file
-  source "$root/.$name"
+  source "$root/.profile"
   
   # install default version of self
   install "$name" "$version"
@@ -103,8 +92,13 @@ bootstrap() {
   "$bin" link "$name" "$version"
 }
 
-# require at least one argument
-[ "$#" = 0 ] && echo "please specify a command" >&2 && exit 127
+# vars
+default_version="0.0.2"
+repo="https://github.com/jessetane/vpkg"
+
+# args
+cmd="$1"
+args="${@:2}"
 
 # run
-"$1" "${@:2}"
+"$cmd" "$args"
