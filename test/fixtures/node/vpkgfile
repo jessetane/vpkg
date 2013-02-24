@@ -1,30 +1,21 @@
 #!/usr/bin/env bash
 #
-# nodejs vpkgfile
+# vpkgfile for node
 #
 
-# defaults
-DEFAULT_NAME="nodejs"
-DEFAULT_VERSION="0.8.20"
-
-bail() {
-  echo "$1" >&2
-  exit 1
-}
-
 common() {
-  
-  # require $VPKG_ROOT
-  [ -z "$VPKG_ROOT" ] && bail '$VPKG_ROOT must be defined'
   
   # args
   name="$1"
   version="$2"
   sourceVersion="$3"
   
+  # validate
+  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && exit 1
+  [ -z "$name" ] && echo "please specify a name" >&2 && exit 1
+  
   # defaults
-  [ -z "$name" ] && name="$DEFAULT_NAME"
-  [ -z "$version" ] && version="$DEFAULT_VERSION"
+  [ -z "$version" ] && version="$default_version"
   [ -z "$sourceVersion" ] && sourceVersion="$version"
   
   # some vars
@@ -45,7 +36,7 @@ install() {
   then
     mkdir -p "$src" && cd $_
     echo "downloading $url..."
-    ! curl -fO# "$url" && bail "version $sourceVersion could not be downloaded"
+    ! curl -fO# "$url" && echo "version $sourceVersion could not be downloaded" >&2 && exit 1
     tar -xvzf "$fname".tar.gz > /dev/null 2>&1
     rm -rf "$fname".tar.gz
     mv node* "$sourceVersion"
@@ -57,8 +48,12 @@ install() {
   cp -R "$src/$sourceVersion" versions/"$version"
 }
 
-# require at least a command
-[ -z "$1" ] && echo "please specify a command" >&2 && exit 127
+# vars
+default_version="0.8.20"
+
+# args
+cmd="$1"
+args="${@:2}"
 
 # run
-"$1" "${@:2}"
+"$cmd" "$args"

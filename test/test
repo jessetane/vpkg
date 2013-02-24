@@ -59,7 +59,7 @@ test_bootstrap() {
   tap "bootstrap - create dirs and config"
   
   # source fresh config
-  source tmp/.vpkg
+  source tmp/.profile
   tap "bootstrap - validate config"
   
   # check our binary linked properly
@@ -75,60 +75,60 @@ test_bootstrap() {
 test_vpkgfile() {
   
   # install
-  echo "file://$(pwd)/fixtures/nodejs/vpkgfile" | vpkg install nodejs
-  tap "install nodejs"
+  echo "file://$(pwd)/fixtures/node/vpkgfile" | vpkg install node
+  tap "install node"
   
   # install alt
-  vpkg install nodejs 0.8.6
-  tap "install nodejs 0.8.6"
+  vpkg install node 0.8.6
+  tap "install node 0.8.6"
   
   # install custom
-  vpkg install nodejs development 0.9.9
-  tap "install nodejs custom version 'development' from 0.9.9"
+  vpkg install node development 0.9.9
+  tap "install node custom version 'development' from 0.9.9"
   
   # link
-  vpkg link nodejs 0.8.6
-  tap "link nodejs 0.8.6"
+  vpkg link node 0.8.6
+  tap "link node 0.8.6"
   check_version "$(node -v)" "0.8.6" "check link version"
   test "$(which node)" = "$VPKG_ROOT"/bin/node
   tap "confirm link"
   
   # link
-  vpkg link nodejs development
-  tap "link nodejs development (0.9.9)"
+  vpkg link node development
+  tap "link node development (0.9.9)"
   check_version "$(node -v)" "0.9.9" "check link version"
   test ! -e "$VPKG_ROOT"/bin/node-waf
   tap "confirm 0.8.6 was unlinked (0.9.9 does not include node-waf)"
   
   # use
-  vpkg-use nodejs 0.8.20
-  tap "use nodejs 0.8.20"
+  vpkg-use node 0.8.20
+  tap "use node 0.8.20"
   check_version "$(node -v)" "0.8.20" "check use version"
 
   # unuse
-  vpkg-unuse nodejs 0.8.20
-  tap "unuse nodejs 0.8.20"
+  vpkg-unuse node 0.8.20
+  tap "unuse node 0.8.20"
   check_version "$(node -v)" "0.9.9" "check unuse version"
   
   # uninstall
-  vpkg uninstall nodejs development
-  tap "uninstall nodejs development"
+  vpkg uninstall node development
+  tap "uninstall node development"
   test "$(which node)" != "$VPKG_ROOT"/bin/node
   tap "confirm uninstall also unlinked"
   
   # link again
-  vpkg link nodejs 0.8.6
-  tap "relink nodejs 0.8.6"
+  vpkg link node 0.8.6
+  tap "relink node 0.8.6"
   
   # test version specify unlink
-  vpkg unlink nodejs 0.8.6
-  tap "unlink nodejs 0.8.6"
+  vpkg unlink node 0.8.6
+  tap "unlink node 0.8.6"
   test "$(which node)" != "$VPKG_ROOT"/bin/node
   tap "confirm unlink"
   
-  # leave nodejs 0.8.20 linked
-  vpkg link nodejs 0.8.20
-  tap "relink nodejs 0.8.20"
+  # leave node 0.8.20 linked
+  vpkg link node 0.8.20
+  tap "relink node 0.8.20"
 }
 
 # sans vpkgfile
