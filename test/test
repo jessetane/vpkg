@@ -48,10 +48,12 @@ test_bootstrap() {
   teardown
   
   # download vpkgfile
-  url="file://$(pwd)/../vpkgfile"
+  repo="file://$(pwd)/.."
+  url="$repo/vpkgfile"
   echo "downloading $url..."
   vpkgfile="$(curl -f# "$url")"
   tap "download vpkgfile"
+  vpkgfile="$(echo "$vpkgfile" | sed "s|repo=\".*|repo=\"$repo\"|")"  # use local repo for testing
   
   # bootstrap
   mkdir tmp
