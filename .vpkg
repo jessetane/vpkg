@@ -3,7 +3,7 @@
 # vpkgfile
 #
 
-default_version="0.0.4"
+default_version="0.0.5"
 repo="https://github.com/jessetane/vpkg"
 profile=".vpkgrc"
 
