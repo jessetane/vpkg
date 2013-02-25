@@ -122,7 +122,9 @@ __vpkg_install() {
     }
     
     # source hooks 
-    source "$src"/"$vpkg_hook_file"
+    [ -f "$src"/"$vpkg_hook_file" ] && source "$src"/"$vpkg_hook_file"
+    
+    # run the hook or fallback
     install "$@"
   )
 }
@@ -140,12 +142,14 @@ __vpkg_uninstall() {
     # fallback
     uninstall() {
       
-      # just copy the src over into versions
+      # just remove the version recursively
       rm -rf "$versions"/"$version"
     }
     
     # source hooks
-    source "$src"/"$vpkg_hook_file"
+    [ -f "$src"/"$vpkg_hook_file" ] && source "$src"/"$vpkg_hook_file"
+    
+    # run the hook or fallback
     uninstall "$@"
   )
 }
