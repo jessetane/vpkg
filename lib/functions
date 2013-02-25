@@ -38,7 +38,7 @@ __vpkg_module() {
   local sourceVersion="$4"
   
   # these could probably be hardcoded..
-  local vpkg_hook_file="vpkgfile"
+  local vpkg_conf_file=".vpkg"
   local vpkg_link_name="current"
   
   # vars
@@ -81,13 +81,13 @@ __vpkg_lookup() {
 __vpkg_install() {
   
   # if we don't have any source files
-  # we should try to lookup a vpkg_hook_file
+  # we should try to lookup a vpkg_conf_file
   if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
   then
     url="$(vpkg-lookup "$name")"
     mkdir -p "$src"
     echo "downloading $url..."
-    curl -f# "$url" -o "$src"/"$vpkg_hook_file"
+    curl -f# "$url" -o "$src"/"$vpkg_conf_file"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
   fi
   
@@ -121,8 +121,8 @@ __vpkg_install() {
       cp -R "$src" "$versions"/"$version"
     }
     
-    # source hooks 
-    [ -f "$src"/"$vpkg_hook_file" ] && source "$src"/"$vpkg_hook_file"
+    # source conf
+    [ -f "$src"/"$vpkg_conf_file" ] && source "$src"/"$vpkg_conf_file"
     
     # run the hook or fallback
     install "$@"
@@ -146,8 +146,8 @@ __vpkg_uninstall() {
       rm -rf "$versions"/"$version"
     }
     
-    # source hooks
-    [ -f "$src"/"$vpkg_hook_file" ] && source "$src"/"$vpkg_hook_file"
+    # source conf
+    [ -f "$src"/"$vpkg_conf_file" ] && source "$src"/"$vpkg_conf_file"
     
     # run the hook or fallback
     uninstall "$@"

@@ -5,6 +5,7 @@
 
 default_version="0.0.4"
 repo="https://github.com/jessetane/vpkg"
+profile=".vpkgrc"
 
 bail() {
   echo "$1" >&2
@@ -13,7 +14,7 @@ bail() {
 
 gen_profile() {
   echo '#
-# .profile - you could source this from your user .profile
+# .vpkgrc - source this
 #
 
 # pkg root
@@ -80,10 +81,10 @@ bootstrap() {
   
   # autogenerate a sourceable profile
   # file and just put it in the root
-  gen_profile "$root" > "$root/.profile"
+  gen_profile "$root" > "$root"/"$profile"
   
   # source the config file
-  source "$root/.profile"
+  source "$root"/"$profile"
   
   # install default version of self
   install "$name" "$version"

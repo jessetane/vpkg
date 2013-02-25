@@ -6,9 +6,11 @@
 # go to own dir
 cd "$(dirname "$BASH_SOURCE")"
 
-# vars to keep track of number of tests run
-t=1
+# vars
+vpkg_profile=".vpkgrc"
+vpkg_conf_file=".vpkg"
 expected=29
+t=1
 
 # some helpers
 
@@ -49,22 +51,22 @@ test_bootstrap() {
   
   # download vpkgfile
   repo="file://$(pwd)/.."
-  url="$repo/vpkgfile"
+  url="$repo"/"$vpkg_conf_file"
   echo "downloading $url..."
-  vpkgfile="$(curl -f# "$url")"
-  tap "download vpkgfile"
-  vpkgfile="$(echo "$vpkgfile" | sed "s|repo=\".*|repo=\"$repo\"|")"  # use local repo for testing
+  hooks="$(curl -f# "$url")"
+  tap "download $vpkg_conf_file"
+  hooks="$(echo "$hooks" | sed "s|repo=\".*|repo=\"$repo\"|")"  # use local repo for testing
   
   # bootstrap
   mkdir tmp
   (
-    eval "$vpkgfile"
+    eval "$hooks"
     bootstrap "$(pwd)"/tmp
   )
   tap "bootstrap - create dirs and config"
   
   # source fresh config
-  source tmp/.profile
+  source tmp/"$vpkg_profile"
   tap "bootstrap - validate config"
   
   # check our binary linked properly
@@ -76,11 +78,11 @@ test_bootstrap() {
   tap "bootstrap - include vpkg function library"
 }
 
-# vpkgfile tests
-test_vpkgfile() {
+# conf file tests
+test_conf() {
   
   # install
-  echo "file://$(pwd)/fixtures/node/vpkgfile" | vpkg install node
+  echo "file://$(pwd)/fixtures/node/$vpkg_conf_file" | vpkg install node
   tap "install node"
   
   # install alt
@@ -163,10 +165,10 @@ test_raw() {
 # test bootstrapping
 test_bootstrap
 
-# test a package with a vpkgfile
-test_vpkgfile
+# test a package with conf
+test_conf
 
-# test a package with no vpkgfile
+# test a package with no conf
 test_raw
 
 # display a summary if we made it this far
