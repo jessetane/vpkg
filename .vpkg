@@ -3,7 +3,7 @@
 # vpkgfile
 #
 
-default_version="0.0.5"
+default_version="0.0.1"
 repo="https://github.com/jessetane/vpkg"
 profile=".vpkgrc"
 
@@ -46,8 +46,11 @@ install() {
   # setup args
   common "$@"
   
+  # vars
+  src="$VPKG_ROOT"/src/"$name"
+  versions="$VPKG_ROOT"/lib/"$name"
+  
   # we have source code?
-  src="$VPKG_ROOT"/lib/"$name"/src
   if [ ! -e "$src" ]
   then
     git clone "$repo" "$src"
@@ -62,8 +65,7 @@ install() {
   git checkout "$sourceVersion"
   
   # install
-  mkdir -p ../versions
-  cp -R . ../versions/"$version"
+  cp -R . "$versions"/"$version"
 }
 
 bootstrap() {
@@ -77,6 +79,7 @@ bootstrap() {
   
   # make some dirs
   mkdir -p "$root"/bin
+  mkdir -p "$root"/src
   mkdir -p "$root"/lib/"$name"
   
   # autogenerate a sourceable profile
@@ -90,7 +93,7 @@ bootstrap() {
   install "$name" "$version"
   
   # ref to executable
-  bin="$root"/lib/"$name"/versions/"$version"/bin/"$name"
+  bin="$root"/lib/"$name"/"$version"/bin/"$name"
   
   # how meta: use the vpkg tool to link itself...
   "$bin" link "$name" "$version"

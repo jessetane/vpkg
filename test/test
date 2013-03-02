@@ -74,7 +74,7 @@ test_bootstrap() {
   tap "bootstrap - test vpkg link"
   
   # include the vpkg function library
-  source tmp/lib/vpkg/versions/current/lib/functions
+  source tmp/lib/vpkg/current/lib/functions
   tap "bootstrap - include vpkg function library"
 }
 
@@ -142,9 +142,9 @@ test_conf() {
 test_raw() {
   
   # setup (pretend we created this package by hand)
-  pkg="$VPKG_ROOT"/lib/raw-src
-  mkdir -p "$pkg"
-  cp -R fixtures/raw-src "$pkg"/src
+  src="$VPKG_ROOT"/src
+  mkdir -p "$src"
+  cp -R fixtures/raw-src "$src"
   
   # install
   vpkg install raw-src 0.0.1

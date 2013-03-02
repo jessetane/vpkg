@@ -42,9 +42,8 @@ __vpkg_module() {
   local vpkg_link_name="current"
   
   # vars
-  local pkg="$VPKG_ROOT"/lib/"$name"
-  local src="$pkg"/src
-  local versions="$pkg"/versions
+  local src="$VPKG_ROOT"/src/"$name"
+  local versions="$VPKG_ROOT"/lib/"$name"
   local bin="$versions/$version"/bin
   
   # common validation
