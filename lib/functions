@@ -59,7 +59,7 @@ __vpkg_module() {
 }
 
 __vpkg_version() {
-  echo "0.0.2"
+  echo "0.0.6"
 }
 
 __vpkg_lookup() {
