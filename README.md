@@ -12,7 +12,7 @@ A version oriented package manager
 Mostly a project to improve my bash scripting...
 
 ## Install
-Trust me?
+Trust me?  
 `(eval "$(curl -f# https://raw.github.com/jessetane/vpkg/master/.vpkg)" && bootstrap <dir>)`
 
 ## License
