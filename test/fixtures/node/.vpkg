@@ -12,13 +12,13 @@ common() {
   version="$2"
   sourceVersion="$3"
   
-  # validate
-  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && exit 1
-  [ -z "$name" ] && echo "please specify a name" >&2 && exit 1
-  
   # defaults
   [ -z "$version" ] && version="$default_version"
   [ -z "$sourceVersion" ] && sourceVersion="$version"
+  
+  # usage
+  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && exit 1
+  [ -z "$name" ] && echo "please specify a name" >&2 && exit 1
   
   # some vars
   os=$(uname | awk '{ print(tolower($1)) }')
@@ -38,7 +38,7 @@ install() {
   then
     mkdir -p "$src" && cd $_
     echo "downloading $url..."
-    ! curl -fO# "$url" && echo "version $sourceVersion could not be downloaded" >&2 && exit 1
+    ! curl -fLO# "$url" && echo "version $sourceVersion could not be downloaded" >&2 && exit 1
     tar -xvzf "$fname".tar.gz > /dev/null 2>&1
     rm -rf "$fname".tar.gz
     mv node* "$sourceVersion"
