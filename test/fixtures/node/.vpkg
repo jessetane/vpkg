@@ -5,46 +5,25 @@
 
 default_version="0.8.20"
 
-common() {
-  
-  # args
-  name="$1"
-  version="$2"
-  sourceVersion="$3"
-  
-  # defaults
-  [ -z "$version" ] && version="$default_version"
-  [ -z "$sourceVersion" ] && sourceVersion="$version"
-  
-  # usage
-  [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && exit 1
-  [ -z "$name" ] && echo "please specify a name" >&2 && exit 1
-  
-  # some vars
-  os=$(uname | awk '{ print(tolower($1)) }')
-  arch=$(uname -p) && arch="${arch: -2}"
-  fname="node-v$sourceVersion-$os-x$arch"
-  url="http://nodejs.org/dist/v$sourceVersion/$fname.tar.gz"
-  src="$VPKG_ROOT"/src/"$name"/build
-}
-
 install() {
   
-  # setup args and vars
-  common "$@"
+  # vars
+  os=$(uname | awk '{ print(tolower($1)) }')
+  arch=$(uname -p) && arch="${arch: -2}"
+  fname="node-v$source_version-$os-x$arch"
+  url="http://nodejs.org/dist/v$source_version/$fname.tar.gz"
   
   # we have source code?
-  if [ ! -e "$src/$sourceVersion" ]
+  if [ ! -e "$src"/build/"$source_version" ]
   then
-    mkdir -p "$src" && cd $_
+    mkdir -p "$src"/build && cd $_
     echo "downloading $url..."
-    ! curl -fLO# "$url" && echo "version $sourceVersion could not be downloaded" >&2 && exit 1
+    ! curl -fLO# "$url" && echo "version $source_version could not be downloaded" >&2 && exit 1
     tar -xvzf "$fname".tar.gz > /dev/null 2>&1
     rm -rf "$fname".tar.gz
-    mv node* "$sourceVersion"
+    mv node* "$source_version"
   fi
   
   # install
-  cd "$VPKG_ROOT"/lib/"$name"
-  cp -R "$src/$sourceVersion" "$version"
+  cp -R "$src"/build/"$source_version" "$lib"/"$version"
 }

@@ -13,14 +13,13 @@ __vpkg_export() {
   for f in "$@"
   do
     eval "vpkg-$f() {
-      __vpkg_module \"__vpkg_$f\" "'"$@"'"; 
+      __vpkg \"$f\" "'"$@"'"; 
     }"
   done
 }
 
 # export public functions as vpkg-<command>
-__vpkg_export "version"\
-              "update"\
+__vpkg_export "update"\
               "lookup"\
               "install"\
               "uninstall"\
@@ -29,130 +28,192 @@ __vpkg_export "version"\
               "use"\
               "unuse"
 
-# private module scope
-__vpkg_module() {
+__vpkg_version() {
+  echo "$vpkg_version"
+}
+
+__vpkg_usage() {
+  echo ""
+  echo "usage: vpkg <command>"
+  echo ""
+  echo "where <command> is one of:"
+  echo "- update (downloads package registries listed in $VPKG_REGISTRY)"
+  echo "- lookup <package> (returns the location of a package's build file)"
+  echo "- install <package> [<version>] [<source version>]"
+  echo "- uninstall <package> [<version>]"
+  echo "- link <package> [<version>] (put <package> on your \$PATH)"
+  echo "- unlink <package> [<version>]"
+  echo ""
+}
+
+__vpkg_parse_arguments() {
+  local i=0
+  local arg
+  local capture
+  for arg in "$@"
+  do
+    case "$arg" in
+      "-l"|"--link") optional[0]=true;;
+      "-v"|"--version") optional[1]=true;;
+      "-b"|"--build-file") capture="build";;
+      *)
+        case "$capture" in
+          "build") optional[2]="$arg";;
+          *) positional[((i++))]="$arg";;
+        esac
+        unset capture
+        ;;
+    esac
+  done
+}
+
+# module wrapper
+__vpkg() {
   
-  # args
-  local cmd="$1"
-  local name="$2"
-  local version="$3"
-  local sourceVersion="$4"
-  
-  # these could probably be hardcoded..
+  # these could probably be hardcoded...
+  local vpkg_version="0.0.7"
   local vpkg_conf_file=".vpkg"
   local vpkg_link_name="current"
+  local vpkg_etc="$VPKG_ROOT"/lib/vpkg/current/etc
+  
+  # parse options and args
+  local optional
+  local positional
+  __vpkg_parse_arguments "$@"
+  
+  # args
+  local cmd="${positional[0]}"
+  local name="${positional[1]}"
+  local version="${positional[2]}"
+  local source_version="${positional[3]}"
   
   # vars
+  local etc="$VPKG_ROOT"/etc/"$name"
+  local bin="$VPKG_ROOT"/bin/"$name"
   local src="$VPKG_ROOT"/src/"$name"
-  local versions="$VPKG_ROOT"/lib/"$name"
-  local bin="$versions/$version"/bin
-  local etc="$VPKG_ROOT"/etc/"vpkg"
+  local lib="$VPKG_ROOT"/lib/"$name"
   
-  # common validation
-  if [ "$cmd" != "__vpkg_version" ]
+  # if no cmd was passed we are being run directly
+  if [ -z "$cmd" ]
   then
+    case "${optional[1]}" in
+      true) __vpkg_version;;
+      *) __vpkg_usage;;
+    esac
+  else
+    
+    # usage
     [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
     [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
     [ -n "$version" ] && [ "$version" = "$vpkg_link_name" ] && echo "$vpkg_link_name is a reserved version name" >&2 && return 1
+    ! type "vpkg-$cmd" | head -n 1 | grep -q "is a function" && __vpkg_usage && return 1
+    
+    # proxy to $cmd
+    "__vpkg_$cmd"
   fi
-  
-  # proxy to command
-  "$cmd" "${@:2}"
-}
-
-__vpkg_version() {
-  echo "0.0.7"
 }
 
 __vpkg_update() {
   
   # make sure etc and our tmp download dir exist
-  mkdir -p "$etc"/tmp
+  mkdir -p "$vpkg_etc"/tmp
   
   local i=0
+  local error
   local registry
   while read registry
   do
     
     # download your registries and stash them in etc/vpkg
     # ensure ordering is respected by renaming the files
-    curl -fL# "$lookup" -o "$etc"/tmp/"$((i++)).registry"
+    curl -fL# "$registry" -o "$vpkg_etc"/tmp/"$((i++)).registry"
     
     # don't continue if there was an error
-    [ $? != 0 ] && break
+    [ $? != 0 ] && error=true && break
     
   done < <(echo "$VPKG_REGISTRY")
   
   # if there were no errors, blow away old 
   # lookups and copy over the new ones
-  [ $? = 0 ] && rm -f "$etc"/* && cp "$etc"/tmp/* "$etc"/
+  [ "$error" != true ] && rm -f "$vpkg_etc"/*.registry && cp "$vpkg_etc"/tmp/* "$vpkg_etc"/
   
-  # blow away our temporary download dir
-  rm -rf "$etc"/tmp
+  # blow away our download dir
+  rm -rf "$vpkg_etc"/tmp
 }
 
 __vpkg_lookup() {
   local registry
-  local location
+  local location="${optional[2]}"
   
-  # attempt to lookup .vpkg location for $name from your registries
-  while read registry
-  do
+  # location may have been specified explicitly via -b <location>
+  if [ -z "$location" ]
+  then
     
-    # in a subshell, source the registry and do the lookup
-    location="$(
-      unset "$name";
-      source "$registry";
-      [ -n "$name" ] && echo "$name"
-    )"
+    # usage
+    [ -z "$VPKG_REGISTRY" ] && echo '$VPKG_REGISTRY must define at least one registry' >&2 && return 1
+    [ ! -d "$vpkg_etc" ] && __vpkg_update
     
-    # if we found a location, break out of the loop
-    [ -n "$location" ] && break
+    # attempt to lookup .vpkg location for $name from your registries
+    while read registry
+    do
     
-  done < <(ls "$etc")
+      # in a subshell, source the registry and do the lookup
+      location="$(
+        unset "$name";
+        source "$vpkg_etc/$registry";
+        [ -n "${!name}" ] && echo "${!name}"
+      )"
+    
+      # if we found a location, break out of the loop
+      [ -n "$location" ] && break
+    
+    done < <(ls "$vpkg_etc")
+  fi
   
-  # if lookup failed, manually input a location
-  while [ -z "$location" ]
-  do
-    
-    # NOTE: the braces make read work when stdin is a pipe
-    { read -p "no .vpkg found for $name, type a url: " location; }
-  done
-  
-  # to stdout
-  echo "$location"
+  # if we don't have a location by now, there was an error
+  [ -n "$location" ] && echo "$location" || return 1
+}
+
+__vpkg_load_conf() {
+  if [ -f "$1" ]
+  then
+    source "$1"
+    [ -z "$version" ] && version="$default_version"
+    [ -z "$source_version" ] && source_version="$version"
+  fi
 }
 
 __vpkg_install() {
   
   # if we don't have any source files
   # we should try to lookup a vpkg_conf_file
-  if [ ! -e "$src" ] || [ -z "$(ls "$src")" ]
+  if [ ! -e "$src" ] || [ -z "$(ls -A "$src")" ]
   then
-    url="$(vpkg-lookup "$name")"
+    url="$(__vpkg_lookup)"
+    [ $? != 0 ] && echo "failed to lookup package: $name" >&2 && return 1
     mkdir -p "$src"
     echo "downloading $url..."
-    curl -f#L "$url" -o "$src"/"$vpkg_conf_file"
-    [ $? != 0 ] && rm -rf "$pkg" && exit 1
+    curl -fL# "$url" -o "$src"/"$vpkg_conf_file"
+    [ $? != 0 ] && rm -rf "$src" && return 1
   fi
   
   # ensure we have a versions dir
-  mkdir -p "$versions"
+  mkdir -p "$lib"
   
   # only allow unspecified version if we don't have any versions already installed
   if [ -z "$version" ]
   then
-    local installed="$(ls "$versions")"
+    local installed="$(ls "$lib")"
     [ -n "$installed" ] && echo -e "version(s): $installed are already installed" >&2 && return 0
   
   # if version was specified, check to be sure it doesn't exist
-  elif [ -e "$versions"/"$version" ]
+  elif [ -e "$lib"/"$version" ]
   then
     echo "version $version is already installed" >&2 && return 1
   fi
   
   # uninstall and unlink any old versions
-  vpkg-uninstall "$name" "$version" > /dev/null 2>&1
+  __vpkg_uninstall > /dev/null 2>&1
   
   # install
   (
@@ -163,14 +224,22 @@ __vpkg_install() {
       [ -z "$version" ] && echo "please specify a version" >&2 && exit 1
       
       # just copy the src over into versions
-      cp -R "$src" "$versions"/"$version"
+      cp -R "$src" "$lib"/"$version"
     }
     
-    # source conf
-    [ -f "$src"/"$vpkg_conf_file" ] && source "$src"/"$vpkg_conf_file"
+    # load conf
+    __vpkg_load_conf "$src"/"$vpkg_conf_file"
     
-    # run the hook or fallback
-    install "$@"
+    # run the hook or fallback - exit immediately if it fails
+    install || exit $?
+    
+    # passing -l allows auto-linking after installation
+    if [ "${optional[0]}" = true ]
+    then
+      __vpkg_link
+    else
+      exit 0
+    fi
   )
 }
 
@@ -179,8 +248,8 @@ __vpkg_uninstall() {
   # validate
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
   
-  # unlink if necessary
-  vpkg-unlink "$name" "$version" > /dev/null 2>&1
+  # unlink
+  __vpkg_unlink > /dev/null 2>&1
   
   # uninstall
   (
@@ -188,14 +257,14 @@ __vpkg_uninstall() {
     uninstall() {
       
       # just remove the version recursively
-      rm -rf "$versions"/"$version"
+      rm -rf "$lib"/"$version"
     }
     
     # source conf
-    [ -f "$src"/"$vpkg_conf_file" ] && source "$src"/"$vpkg_conf_file"
+    __vpkg_load_conf "$src"/"$vpkg_conf_file"
     
     # run the hook or fallback
-    uninstall "$@"
+    uninstall
   )
 }
 
@@ -203,57 +272,64 @@ __vpkg_link() {
   
   # validate
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
-  [ ! -e "$versions"/"$version" ] && echo "version $version is not installed" >&2 && return 1
+  [ ! -e "$lib"/"$version" ] && echo "version $version is not installed" >&2 && return 1
   
-  # unlink
+  # unlink - NOTE: we use the public interface here to ensure $version is not defined
   vpkg-unlink "$name" > /dev/null 2>&1
   
   # create link
-  ln -s "$versions"/"$version" "$versions"/"$vpkg_link_name"
+  ln -s "$lib"/"$version" "$lib"/"$vpkg_link_name"
   
   # create executables
   local executable
-  ls "$bin" | while read executable
+  ls "$lib"/"$version"/bin | while read executable
   do
     
     # link via exec
     local dest="$VPKG_ROOT"/bin/"$executable"
-    echo "exec $bin/$executable "'$@' > "$dest"
+    echo "exec $lib/$version/bin/$executable "'$@' > "$dest"
     chmod +x "$dest"
   done
+  
+  # clear hash
+  hash -r
 }
 
 __vpkg_unlink() {
-  local old_link="$(readlink "$versions"/"$vpkg_link_name")"
+  local old_link="$(readlink "$lib"/"$vpkg_link_name")"
   
   # if a version was specified, check to ensure that version is actually linked
-  if [ -n "$version" ] && [ "$old_link" != "$versions"/"$version" ]
+  
+  if [ -n "$version" ] && [ "$old_link" != "$lib"/"$version" ]
   then
     echo "version $version is not linked" >&2
     return 1
   fi
   
   # remove link
-  rm -rf "$versions"/"$vpkg_link_name"
+  rm -rf "$lib"/"$vpkg_link_name"
   
   # remove old executables
-  ls "$old_link"/bin | while read bin
+  ls "$old_link"/bin | while read executable
   do
-    rm -rf "$VPKG_ROOT"/bin/"$bin"
+    rm -rf "$VPKG_ROOT"/bin/"$executable"
   done
+  
+  # clear hash
+  hash -r
 }
 
 __vpkg_use() {
 
   # validate
   [ -z "$version" ] && echo "please specify a version" >&2 && return 1
-  [ ! -e "$bin" ] && echo "version $version is not installed" >&2 && return 1
+  [ ! -d "$lib"/"$version"/bin ] && echo "version $version is not installed" >&2 && return 1
 
   # unuse old versions
-  vpkg-unuse "$name"
+  __vpkg_unuse
 
   # use new version
-  export PATH="$bin":$PATH
+  export PATH="$lib"/"$version"/bin:"$PATH"
 }
 
 __vpkg_unuse() {
@@ -262,5 +338,5 @@ __vpkg_unuse() {
   [ -z "$version" ] && version="[^/]*"
   
   # remove all old versions
-  export PATH="$(echo "$PATH" | sed "s|$versions/$version/bin:||g")"
+  export PATH="$(echo "$PATH" | sed "s|$lib/$version/bin:||g")"
 }

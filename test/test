@@ -55,7 +55,7 @@ test_bootstrap() {
   echo "downloading $url..."
   hooks="$(curl -f# "$url")"
   tap "download $vpkg_conf_file"
-  hooks="$(echo "$hooks" | sed "s|repo=\".*|repo=\"$repo\"|")"  # use local repo for testing
+  hooks="$(echo "$hooks" | sed "s|repo_url=\".*|repo_url=\"$repo\"|")"  # use local repo for testing
   
   # bootstrap
   mkdir tmp
@@ -82,7 +82,7 @@ test_bootstrap() {
 test_conf() {
   
   # install
-  echo "file://$(pwd)/fixtures/node/$vpkg_conf_file" | vpkg install node
+  vpkg install node -b "file://$(pwd)/fixtures/node/$vpkg_conf_file"
   tap "install node"
   
   # install alt

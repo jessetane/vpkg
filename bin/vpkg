@@ -6,31 +6,8 @@
 # go to own dir
 cd "$(dirname $BASH_SOURCE)"
 
-# args
-cmd="$1"
-shift
-
 # include vpkg function library
 source ../lib/functions
 
-# run
-case "$cmd" in
-  "install")
-    vpkg-install "$@"
-    ;;
-  "uninstall")
-    vpkg-uninstall "$@"
-    ;;
-  "link")
-    vpkg-link "$@"
-    ;;
-  "unlink")
-    vpkg-unlink "$@"
-    ;;
-  "-v"|"--version"|"version")
-    vpkg-version
-    ;;
-  *)
-    echo "$cmd: command not found" >&2 && exit 1
-    ;;
-esac
+# invoke via the module wrapper
+__vpkg "$@"

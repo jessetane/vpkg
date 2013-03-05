@@ -4,13 +4,7 @@
 #
 
 default_version="0.0.7"
-repo="https://github.com/jessetane/vpkg"
-profile=".vpkgrc"
-
-bail() {
-  echo "$1" >&2
-  exit 1
-}
+repo_url="https://github.com/jessetane/vpkg"
 
 gen_profile() {
   echo '#
@@ -28,47 +22,24 @@ export PATH="$VPKG_ROOT"/bin:"$PATH"
 '
 }
 
-common() {
-  
-  # args
-  name="$1"
-  version="$2"
-  sourceVersion="$3"
-  
-  # require $VPKG_ROOT
-  [ -z "$VPKG_ROOT" ] && bail '$VPKG_ROOT must be defined'
-  [ -z "$name" ] && bail '$name must be defined'
-  
-  # defaults
-  [ -z "$version" ] && version="$default_version"
-  [ -z "$sourceVersion" ] && sourceVersion="$version"
-}
-
 install() {
+  cd "$src"
   
-  # setup args
-  common "$@"
-  
-  # vars
-  src="$VPKG_ROOT"/src/"$name"
-  versions="$VPKG_ROOT"/lib/"$name"
-  
-  # we have source code?
-  if [ ! -e "$src" ]
+  # get repo
+  if [ ! -d .git ]
   then
-    git clone "$repo" "$src"
+    git clone "$repo_url" tmp
+    mv tmp/.git ./
+    rm -rf tmp
   fi
   
-  # update
-  cd "$src"
+  # checkout code
   git fetch --all
   git fetch --tags
-  
-  # version
-  git checkout "$sourceVersion"
+  git reset --hard "$source_version"
   
   # install
-  cp -R . "$versions"/"$version"
+  cp -R . "$lib"/"$version"
 }
 
 bootstrap() {
@@ -76,27 +47,31 @@ bootstrap() {
   # args
   root="$1"
   name="vpkg"
+  version="$default_version"
+  source_version="$version"
+  src="$root"/src/"$name"
+  lib="$root"/lib/"$name"
   
   # default to pwd
-  [ -z "$root" ] && bail "please specify a directory to bootstrap into"
+  [ -z "$root" ] && echo "please specify a directory to bootstrap into" >&2 && exit 1
   
   # make some dirs
+  mkdir -p "$src"
+  mkdir -p "$lib"
   mkdir -p "$root"/bin
-  mkdir -p "$root"/src
-  mkdir -p "$root"/lib/"$name"
   
   # autogenerate a sourceable profile
   # file and just put it in the root
-  gen_profile "$root" > "$root"/"$profile"
+  gen_profile "$root" > "$root"/".vpkgrc"
   
   # source the config file
-  source "$root"/"$profile"
+  source "$root"/".vpkgrc"
   
   # install default version of self
-  install "$name" "$version"
+  install
   
   # ref to executable
-  bin="$root"/lib/"$name"/"$version"/bin/"$name"
+  bin="$lib"/"$version"/bin/"$name"
   
   # how meta: use the vpkg tool to link itself...
   "$bin" link "$name" "$version"
