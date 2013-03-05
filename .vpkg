@@ -17,8 +17,11 @@ gen_profile() {
 # .vpkgrc - source this
 #
 
-# pkg root
+# vpkg root
 export VPKG_ROOT="'"$1"'"
+
+# vpkg registries - add as many urls as you like, seperated by newlines
+export VPKG_REGISTRY="https://raw.github.com/jessetane/vpkg-registry/master/registry"
 
 # add bin to PATH
 export PATH="$VPKG_ROOT"/bin:"$PATH"
