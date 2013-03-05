@@ -86,7 +86,7 @@ __vpkg_install() {
     url="$(vpkg-lookup "$name")"
     mkdir -p "$src"
     echo "downloading $url..."
-    curl -f# "$url" -o "$src"/"$vpkg_conf_file"
+    curl -f#L "$url" -o "$src"/"$vpkg_conf_file"
     [ $? != 0 ] && rm -rf "$pkg" && exit 1
   fi
   
