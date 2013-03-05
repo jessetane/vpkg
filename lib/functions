@@ -20,6 +20,7 @@ __vpkg_export() {
 
 # export public functions as vpkg-<command>
 __vpkg_export "version"\
+              "update"\
               "lookup"\
               "install"\
               "uninstall"\
@@ -45,9 +46,10 @@ __vpkg_module() {
   local src="$VPKG_ROOT"/src/"$name"
   local versions="$VPKG_ROOT"/lib/"$name"
   local bin="$versions/$version"/bin
+  local etc="$VPKG_ROOT"/etc/"vpkg"
   
   # common validation
-  if [ "$cmd" != "__vpkg_version" ] 
+  if [ "$cmd" != "__vpkg_version" ]
   then
     [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
     [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
@@ -62,19 +64,63 @@ __vpkg_version() {
   echo "0.0.6"
 }
 
-__vpkg_lookup() {
+__vpkg_update() {
   
-  # TODO: lookup formula location from a package registry?
-  # formula_location=""
+  # make sure etc and our tmp download dir exist
+  mkdir -p "$etc"/tmp
   
-  # manually input a formula location
-  while [ -z "$formula_location" ]
+  local i=0
+  local registry
+  while read registry
   do
-    { read -p "no formula found for $name, type a url: " formula_location; }
+    
+    # download your registries and stash them in etc/vpkg
+    # ensure ordering is respected by renaming the files
+    curl -fL# "$lookup" -o "$etc"/tmp/"$((i++)).registry"
+    
+    # don't continue if there was an error
+    [ $? != 0 ] && break
+    
+  done < <(echo "$VPKG_REGISTRY")
+  
+  # if there were no errors, blow away old 
+  # lookups and copy over the new ones
+  [ $? = 0 ] && rm -f "$etc"/* && cp "$etc"/tmp/* "$etc"/
+  
+  # blow away our temporary download dir
+  rm -rf "$etc"/tmp
+}
+
+__vpkg_lookup() {
+  local registry
+  local location
+  
+  # attempt to lookup .vpkg location for $name from your registries
+  while read registry
+  do
+    
+    # in a subshell, source the registry and do the lookup
+    location="$(
+      unset "$name";
+      source "$registry";
+      [ -n "$name" ] && echo "$name"
+    )"
+    
+    # if we found a location, break out of the loop
+    [ -n "$location" ] && break
+    
+  done < <(ls "$etc")
+  
+  # if lookup failed, manually input a location
+  while [ -z "$location" ]
+  do
+    
+    # NOTE: the braces make read work when stdin is a pipe
+    { read -p "no .vpkg found for $name, type a url: " location; }
   done
   
-  # 
-  echo "$formula_location"
+  # to stdout
+  echo "$location"
 }
 
 __vpkg_install() {
