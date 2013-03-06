@@ -195,7 +195,7 @@ __vpkg_install() {
   if [ -z "$version" ]
   then
     local installed="$(ls "$lib")"
-    [ -n "$installed" ] && echo -e "version(s): $installed are already installed" >&2 && return 0
+    [ -n "$installed" ] && return 0
   
   # if version was specified, check to be sure it doesn't exist
   elif [ -e "$lib"/"$version" ]
