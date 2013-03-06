@@ -13,7 +13,7 @@ __vpkg_export() {
   for f in "$@"
   do
     eval "vpkg-$f() {
-      __vpkg \"$f\" "'"$@"'"; 
+      __vpkg \"$f\" "'"$@"'";
     }"
   done
 }
@@ -93,10 +93,10 @@ __vpkg() {
   else
     
     # usage
-    [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
-    [ -z "$name" ] && echo "please specify a package name" >&2 && return 1
-    [ -n "$version" ] && [ "$version" = "$vpkg_link_name" ] && echo "$vpkg_link_name is a reserved version name" >&2 && return 1
     ! type "vpkg-$cmd" | head -n 1 | grep -q "is a function" && __vpkg_usage && return 1
+    [ -z "$VPKG_ROOT" ] && echo '$VPKG_ROOT must be defined' >&2 && return 1
+    [ -z "$name" ] && [ "$cmd" != "update" ] && echo "please specify a package name" >&2 && return 1
+    [ -n "$version" ] && [ "$version" = "$vpkg_link_name" ] && echo "$vpkg_link_name is a reserved version name" >&2 && return 1
     
     # proxy to $cmd
     "__vpkg_$cmd"
