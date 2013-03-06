@@ -33,17 +33,7 @@ __vpkg_version() {
 }
 
 __vpkg_usage() {
-  echo ""
-  echo "usage: vpkg <command>"
-  echo ""
-  echo "where <command> is one of:"
-  echo "- update (downloads package registries listed in $VPKG_REGISTRY)"
-  echo "- lookup <package> (returns the location of a package's build file)"
-  echo "- install <package> [<version>] [<source version>]"
-  echo "- uninstall <package> [<version>]"
-  echo "- link <package> [<version>] (put <package> on your \$PATH)"
-  echo "- unlink <package> [<version>]"
-  echo ""
+  echo "usage: vpkg [-options] <command> [<package>] [<dest version>] [<source version>]"
 }
 
 __vpkg_parse_arguments() {
