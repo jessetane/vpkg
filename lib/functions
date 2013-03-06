@@ -165,9 +165,10 @@ __vpkg_lookup() {
 }
 
 __vpkg_load_conf() {
-  if [ -f "$1" ]
+  local hooks="$src"/"$vpkg_conf_file"
+  if [ -f "$hooks" ]
   then
-    source "$1"
+    source "$hooks"
     [ -z "$version" ] && version="$default_version"
     [ -z "$source_version" ] && source_version="$version"
   fi
@@ -218,7 +219,7 @@ __vpkg_install() {
     }
     
     # load conf
-    __vpkg_load_conf "$src"/"$vpkg_conf_file"
+    __vpkg_load_conf
     
     # run the hook or fallback - exit immediately if it fails
     install || exit $?
@@ -251,7 +252,7 @@ __vpkg_uninstall() {
     }
     
     # source conf
-    __vpkg_load_conf "$src"/"$vpkg_conf_file"
+    __vpkg_load_conf
     
     # run the hook or fallback
     uninstall
