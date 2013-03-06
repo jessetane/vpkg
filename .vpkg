@@ -3,7 +3,7 @@
 # vpkgfile
 #
 
-default_version="0.0.7"
+default_version="0.0.8"
 repo_url="https://github.com/jessetane/vpkg"
 
 gen_profile() {

@@ -61,7 +61,7 @@ __vpkg_parse_arguments() {
 __vpkg() {
   
   # these could probably be hardcoded...
-  local vpkg_version="0.0.7"
+  local vpkg_version="0.0.8"
   local vpkg_conf_file=".vpkg"
   local vpkg_link_name="current"
   local vpkg_etc="$VPKG_ROOT"/lib/vpkg/current/etc
