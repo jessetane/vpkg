@@ -1,10 +1,61 @@
-#!/usr/bin/env bash
 #
-# vpkgfile
+# .vpkg
 #
 
-default_version="0.0.8"
-repo_url="https://github.com/jessetane/vpkg"
+url() {
+  echo "https://github.com/jessetane/vpkg"
+}
+
+version() {
+  echo "HEAD"
+}
+
+install() {
+  cd "$src"
+  
+  # get repo
+  [ ! -d .git ] && git clone "$(url)" ./
+  
+  # checkout code
+  git fetch --all
+  git fetch --tags
+  
+  # install
+  mkdir -p "$lib"/"$build" && cd $_
+  cp -R "$src"/.git ./
+  git reset --hard "$version"
+}
+
+bootstrap() {
+  
+  # require VPKG_HOME
+  [ -z "$VPKG_HOME" ] && echo "VPKG_HOME is not defined" >&2 && return 1
+  
+  # vars
+  name="vpkg"
+  build="default"
+  version="$(version)"
+  bin="$VPKG_HOME"/bin
+  src="$VPKG_HOME"/src/"$name"
+  lib="$VPKG_HOME"/lib/"$name"
+  
+  # make some dirs
+  mkdir -p "$src"
+  mkdir -p "$bin"
+  
+  # autogenerate a sourceable profile
+  # file and just put it in the root
+  gen_profile > "$VPKG_HOME"/.vpkgrc
+  
+  # install default version of self
+  install
+  
+  # source the config file
+  . "$lib"/"$build"/bin/vpkg.sh
+  
+  # how meta: use the vpkg tool to link itself...
+  vpkg link "$name" "$build"
+}
 
 gen_profile() {
   echo '#
@@ -12,67 +63,20 @@ gen_profile() {
 #
 
 # vpkg root
-export VPKG_ROOT="'"$1"'"
+export VPKG_HOME="'"$VPKG_HOME"'"
 
 # vpkg registries - add as many urls as you like, seperated by newlines
-export VPKG_REGISTRY="https://raw.github.com/jessetane/vpkg-registry/master/registry"
+export VPKG_REGISTRIES="file://$VPKG_HOME/lib/vpkg/default/test/fixtures/registry.sample"
 
 # add bin to PATH
-export PATH="$VPKG_ROOT"/bin:"$PATH"
+export PATH="$VPKG_HOME"/bin:"$PATH"
+
+# source vpkg command
+. vpkg.sh
 '
 }
 
-install() {
-  cd "$src"
-  
-  # get repo
-  if [ ! -d .git ]
-  then
-    git clone "$repo_url" tmp
-    mv tmp/.git ./
-    rm -rf tmp
-  fi
-  
-  # checkout code
-  git fetch --all
-  git fetch --tags
-  git reset --hard "$source_version"
-  
-  # install
-  cp -R . "$lib"/"$version"
-}
+set -e
 
-bootstrap() {
-  
-  # args
-  root="$1"
-  name="vpkg"
-  version="$default_version"
-  source_version="$version"
-  src="$root"/src/"$name"
-  lib="$root"/lib/"$name"
-  
-  # default to pwd
-  [ -z "$root" ] && echo "please specify a directory to bootstrap into" >&2 && exit 1
-  
-  # make some dirs
-  mkdir -p "$src"
-  mkdir -p "$lib"
-  mkdir -p "$root"/bin
-  
-  # autogenerate a sourceable profile
-  # file and just put it in the root
-  gen_profile "$root" > "$root"/".vpkgrc"
-  
-  # source the config file
-  source "$root"/".vpkgrc"
-  
-  # install default version of self
-  install
-  
-  # ref to executable
-  bin="$lib"/"$version"/bin/"$name"
-  
-  # how meta: use the vpkg tool to link itself...
-  "$bin" link "$name" "$version"
-}
+# run cmd or bootstrap
+[ -n "$cmd" ] && "$cmd" || bootstrap

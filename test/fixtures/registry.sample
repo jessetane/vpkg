@@ -1,0 +1,2 @@
+node="file://${VPKG_HOME}/src/vpkg-node/.vpkg"
+httpcat="file://${VPKG_HOME}/src/httpcat/.vpkg"

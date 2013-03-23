@@ -6,14 +6,24 @@
        |__|        |_____|
 	
 ```
-A version oriented package manager
+A language agnostic, version oriented package manager.
 
 ## Why
-Mostly a project to improve my bash scripting...
+Started out as a project to improve my bash scripting...
 
-## Install
-Trust me?  
-`(eval "$(curl -f# https://raw.github.com/jessetane/vpkg/master/.vpkg)" && bootstrap <dir>)`
+## How
+Sourcable shell script.
+
+## Dependencies
+bash
+mktemp
+cat
+curl
+argue
+
+## TODO
+- unify lookup & get-recipe or update --all re-fetch recipes?
+- fix the "force local" garbage
 
 ## License
 [WTFPL](http://www.wtfpl.net/txt/copying/)
