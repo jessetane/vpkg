@@ -173,6 +173,7 @@ vpkg_get_recipe() {
 
 vpkg_follow_recipe() {
   recipe="$recipe_cache"/"$name"
+  unset recipe_status
   
   if [ -e "$recipe" ]
   then
@@ -185,11 +186,11 @@ vpkg_follow_recipe() {
     # if version = default, see if the recipe provides a default
     if [ "$version" = "default" ]
     then
-      local temp="$(cmd="version" /bin/sh "$recipe")" && version="$temp"
+      temp="$(/bin/sh "$recipe" version)" && version="$temp"
     fi
     
     # follow the recipe
-    /bin/sh "$recipe"
+    /bin/sh "$recipe" "$cmd"
     recipe_status="$?"
     
     # check for errors
@@ -235,7 +236,7 @@ vpkg_install() {
     # follow recipe
     vpkg_follow_recipe || return $?
     
-    # install manually depending on what happened with the recipe
+    # install manually if no recipe or command not found
     if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
     then
       mkdir -p "$lib"
@@ -269,7 +270,7 @@ vpkg_uninstall() {
   # hook
   vpkg_follow_recipe || return $?
   
-  # uninstall manually depending on what happened with the recipe
+  # uninstall manually if no recipe or command not found
   if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
   then
     [ -e "$lib"/"$build" ] && rm -rf "$lib"/"$build"
@@ -294,28 +295,36 @@ vpkg_link() {
   # unlink any builds already linked
   vpkg unlink "$name"
   
-  # create link
-  ln -sf "$lib"/"$build" "$lib"/"$link_name"
+  # recipe
+  vpkg_follow_recipe || return $?
   
-  # create executables
-  local executable
-  ls "$lib"/"$version"/bin | while read executable
-  do
-    local dest="$VPKG_HOME"/bin/"$executable"
+  # link manually if no recipe or command not found
+  if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
+  then
+  
+    # create link
+    ln -sf "$lib"/"$build" "$lib"/"$link_name"
+  
+    # create executables
+    local executable
+    ls "$lib"/"$version"/bin | while read executable
+    do
+      local dest="$VPKG_HOME"/bin/"$executable"
     
-    # linking happens differently depending on whether the file is executable
-    if [ -x "$lib"/"$build"/bin/"$executable" ]
-    then
+      # linking happens differently depending on whether the file is executable
+      if [ -x "$lib"/"$build"/bin/"$executable" ]
+      then
     
-      # link via exec
-      echo "exec ${lib}/${build}/bin/$executable "'$@' > "$dest"
-      chmod +x "$dest"
-    else
+        # link via exec
+        echo "exec ${lib}/${build}/bin/$executable "'$@' > "$dest"
+        chmod +x "$dest"
+      else
       
-      # soft link
-      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
-    fi
-  done
+        # soft link
+        ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
+      fi
+    done
+  fi
   
   # PATH needs updating
   echo "$PATH" > "$ipcfile"
@@ -336,14 +345,22 @@ vpkg_unlink() {
     return 1
   fi
   
-  # remove link
-  rm -rf "$lib"/"$link_name"
+  # recipe
+  vpkg_follow_recipe || return $?
   
-  # remove old executables
-  ls "$old_link"/bin | while read executable
-  do
-    rm -rf "$VPKG_HOME"/bin/"$executable"
-  done
+  # unlink manually if no recipe or command not found
+  if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
+  then
+  
+    # remove link
+    rm -rf "$lib"/"$link_name"
+  
+    # remove old executables
+    ls "$old_link"/bin | while read executable
+    do
+      rm -rf "$VPKG_HOME"/bin/"$executable"
+    done
+  fi
   
   # PATH needs updating
   echo "$PATH" > "$ipcfile"
@@ -365,14 +382,17 @@ vpkg_load() {
   # unload any currently loaded versions first
   vpkg unload "$name"
   
+  # recipe - event only
+  vpkg_follow_recipe || return $?
+  
   # don't place a ":" at the end of PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  
+
   # add package/version/bin to PATH
   PATH="$lib"/"$build"/bin"$PATH"
-  echo "$PATH" > "$ipcfile"
   
   # PATH needs updating
+  echo "$PATH" > "$ipcfile"
   return 78
 }
 
@@ -381,11 +401,14 @@ vpkg_unload() {
   argue || return 1
   vpkg_init_public || return 1
   
+  # recipe - event only
+  vpkg_follow_recipe || return $?
+  
   # remove package/build from PATH
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
-  echo "$PATH" > "$ipcfile"
   
   # PATH needs updating
+  echo "$PATH" > "$ipcfile"
   return 78
 }
