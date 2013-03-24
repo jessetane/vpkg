@@ -1,3 +1,0 @@
-install() { :; }
-export -f install
-./two

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# .vpkg for node
+#
+
+url() {
+  echo "http://nodejs.org/dist/v$version/$fname"
+}
+
+version() {
+  echo "0.8.20"
+}
+
+install() {
+  
+  # vars
+  os=$(uname | awk '{ print(tolower($1)) }')
+  arch=$(uname -p) && arch="${arch: -2}"
+  fname="node-v${version}-${os}-x${arch}.tar.gz"
+  archive="$src"/build/"$fname"
+  url="$(url)"
+  
+  # download an archive of the requested
+  # version if we don't already have it
+  if [ ! -e "$archive" ]
+  then
+    
+    # ensure dirs exists
+    mkdir -p "$src"/build
+  
+    # dl
+    echo "downloading $url..."
+    ! curl -fL# "$url" -o "$archive" && echo "$version: version could not be downloaded" >&2 && return 1
+  fi
+  
+  # ensure lib exists
+  mkdir -p "$lib"
+  
+  # untar to lib/<package>
+  tar -xvzf "$archive" -C "$lib" &> /dev/null
+  
+  # rename to $build - HACK: some versions untar
+  # to non standard names, but globbing works since
+  # they all seem to at least start with "node"
+  mv "$lib"/node* "$lib"/"$build"
+}
+
+# run
+"$1"
