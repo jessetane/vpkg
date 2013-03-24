@@ -28,9 +28,6 @@ install() {
 
 bootstrap() {
   
-  # require VPKG_HOME
-  [ -z "$VPKG_HOME" ] && echo "VPKG_HOME is not defined" >&2 && return 1
-  
   # vars
   name="vpkg"
   build="default"
@@ -38,6 +35,10 @@ bootstrap() {
   bin="$VPKG_HOME"/bin
   src="$VPKG_HOME"/src/"$name"
   lib="$VPKG_HOME"/lib/"$name"
+  
+  # sanity
+  [ -z "$VPKG_HOME" ] && echo "VPKG_HOME is not defined" >&2 && return 1
+  [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here"
   
   # make some dirs
   mkdir -p "$src" && cd $_
@@ -56,6 +57,13 @@ bootstrap() {
   git reset --hard "$version"
   ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
   ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
+  
+  # source profile
+  . "$VPKG_HOME"/.vpkgrc
+  
+  # now we are self hosted!
+  vpkg install vpkg
+  vpkg install argue
 }
 
 gen_profile() {
@@ -77,7 +85,8 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 '
 }
 
+# stay safe
 set -e
 
-# run cmd or bootstrap
-[ -n "$cmd" ] && "$cmd" || bootstrap
+# run or bootstrap
+[ -n "$1" ] && "$1" || bootstrap
