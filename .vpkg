@@ -56,9 +56,6 @@ bootstrap() {
   git reset --hard "$version"
   ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
   ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
-  
-  # source vpkg profile
-  . "$VPKG_HOME"/.vpkgrc
 }
 
 gen_profile() {

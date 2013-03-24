@@ -295,7 +295,7 @@ vpkg_link() {
   vpkg unlink "$name"
   
   # create link
-  ln -s "$lib"/"$build" "$lib"/"$link_name"
+  ln -sf "$lib"/"$build" "$lib"/"$link_name"
   
   # create executables
   local executable
@@ -313,7 +313,7 @@ vpkg_link() {
     else
       
       # soft link
-      ln -s "$lib"/"$build"/bin/"$executable" "$dest"
+      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
     fi
   done
   
