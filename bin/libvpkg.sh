@@ -279,8 +279,9 @@ vpkg_uninstall() {
   # remove $name if no more builds
   [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
   
-  # if we get here, it worked
-  return 0
+  # if we get here, it worked but we should update PATH
+  echo "$PATH" > "$ipcfile"
+  return 78
 }
 
 vpkg_link() {
