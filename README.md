@@ -23,7 +23,6 @@ argue
 
 ## TODO
 - unify lookup & get-recipe or update --all re-fetch recipes?
-- fix the "force local" garbage
 
 ## License
 [WTFPL](http://www.wtfpl.net/txt/copying/)

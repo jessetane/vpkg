@@ -248,6 +248,8 @@ vpkg_install() {
   if [ -n "${opts[1]}" ] || [ ! -e "$lib"/"$link_name" ]
   then
     vpkg link "$name" "$build"
+    echo "$PATH" > "$ipcfile"
+    return 78
   else
     return 0
   fi
