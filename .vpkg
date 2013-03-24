@@ -46,7 +46,7 @@ bootstrap() {
   
   # autogenerate a sourceable profile
   # file and just put it in the root
-  gen_profile > "$VPKG_HOME"/.vpkgrc
+  profile > "$VPKG_HOME"/.vpkgrc
   
   # install dependency: argue
   git clone "https://github.com/jessetane/argue" "$VPKG_HOME"/src/argue
@@ -61,13 +61,13 @@ bootstrap() {
   # source profile
   . "$VPKG_HOME"/.vpkgrc
   
-  # now we are self hosted!
-  vpkg install vpkg
+  # now we are self hosted, so do proper installation
   vpkg install argue
+  vpkg install vpkg
 }
 
-gen_profile() {
-  echo '#
+profile() {
+  echo -n '#
 # .vpkgrc - source this
 #
 
@@ -75,7 +75,7 @@ gen_profile() {
 export VPKG_HOME="'"$VPKG_HOME"'"
 
 # vpkg registries - add as many urls as you like, seperated by newlines
-export VPKG_REGISTRIES="file://$VPKG_HOME/src/vpkg/test/fixtures/registry.sample"
+export VPKG_REGISTRIES="file://${VPKG_HOME}/src/vpkg/test/fixtures/registry.sample"
 
 # add bin to PATH
 export PATH="$VPKG_HOME"/bin:"$PATH"
@@ -84,9 +84,6 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 . vpkg.sh
 '
 }
-
-# stay safe
-set -e
 
 # run or bootstrap
 if [ -n "$1" ]
