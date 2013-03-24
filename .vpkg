@@ -7,7 +7,7 @@ url() {
 }
 
 version() {
-  echo "HEAD"
+  echo "testing"
 }
 
 install() {
@@ -47,14 +47,17 @@ bootstrap() {
   # file and just put it in the root
   gen_profile > "$VPKG_HOME"/.vpkgrc
   
-  # install default version of self
-  install
+  # install dependency: argue
+  git clone "https://github.com/jessetane/argue" "$VPKG_HOME"/src/argue
+  ln -s "$VPKG_HOME"/src/argue/bin/libargue.sh "$VPKG_HOME"/bin/
   
-  # source the config file
-  . "$lib"/"$build"/bin/vpkg.sh
+  # install self
+  git clone "https://github.com/jessetane/vpkg" "$VPKG_HOME"/src/vpkg
+  ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
+  ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
   
-  # how meta: use the vpkg tool to link itself...
-  vpkg link "$name" "$build"
+  # source vpkg profile
+  . "$VPKG_HOME"/.vpkgrc
 }
 
 gen_profile() {

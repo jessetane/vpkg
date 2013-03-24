@@ -182,6 +182,12 @@ vpkg_follow_recipe() {
     # XXX: export -f might be a bashism...
     eval "${cmd}() { return 127; }; export -f $cmd;"
     
+    # if version = default, see if the recipe provides a default
+    if [ "$version" = "default" ]
+    then
+      local temp="$(cmd="version" /bin/sh "$recipe")" && version="$temp"
+    fi
+    
     # follow the recipe
     /bin/sh "$recipe"
     recipe_status="$?"
