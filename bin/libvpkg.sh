@@ -307,7 +307,7 @@ vpkg_link() {
   
     # create executables
     local executable
-    ls "$lib"/"$version"/bin | while read executable
+    ls "$lib"/"$build"/bin | while read executable
     do
       local dest="$VPKG_HOME"/bin/"$executable"
     
