@@ -11,7 +11,7 @@ version() {
 }
 
 install() {
-  cd "$src"
+  mkdir -p "$src" && cd $_
   
   # get repo
   [ ! -d .git ] && git clone "$(url)" ./
@@ -38,7 +38,7 @@ bootstrap() {
   
   # sanity
   [ -z "$VPKG_HOME" ] && echo "VPKG_HOME is not defined" >&2 && return 1
-  [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here"
+  [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here" >&2 && return 1
   
   # make some dirs
   mkdir -p "$src" && cd $_
@@ -89,4 +89,9 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 set -e
 
 # run or bootstrap
-[ -n "$1" ] && "$1" || bootstrap
+if [ -n "$1" ]
+then
+  "$1"
+else
+  bootstrap
+fi
