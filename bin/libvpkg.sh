@@ -152,9 +152,9 @@ vpkg_get_recipe() {
         
         # it's possible to build recipeless
         # packages if they have source files
-        if [ -n "$(ls -A "$src")" ]
+        if [ -e "$src" ] && [ -n "$(ls -A "$src")" ]
         then
-          echo "warning: no recipe found, installing raw source files" >&2
+          echo "$name: no recipe found, so just installing the raw source..." >&2
         else
           cat "$ipcfile" >&2
           return 1
