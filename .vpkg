@@ -40,7 +40,7 @@ bootstrap() {
   lib="$VPKG_HOME"/lib/"$name"
   
   # make some dirs
-  mkdir -p "$src"
+  mkdir -p "$src" && cd $_
   mkdir -p "$bin"
   
   # autogenerate a sourceable profile
@@ -53,6 +53,7 @@ bootstrap() {
   
   # install self
   git clone "https://github.com/jessetane/vpkg" "$VPKG_HOME"/src/vpkg
+  git reset --hard "$version"
   ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
   ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
   
@@ -69,7 +70,7 @@ gen_profile() {
 export VPKG_HOME="'"$VPKG_HOME"'"
 
 # vpkg registries - add as many urls as you like, seperated by newlines
-export VPKG_REGISTRIES="file://$VPKG_HOME/lib/vpkg/default/test/fixtures/registry.sample"
+export VPKG_REGISTRIES="file://$VPKG_HOME/src/vpkg/test/fixtures/registry.sample"
 
 # add bin to PATH
 export PATH="$VPKG_HOME"/bin:"$PATH"

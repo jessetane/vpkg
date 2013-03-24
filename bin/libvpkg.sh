@@ -214,9 +214,6 @@ vpkg_install() {
   vpkg_init_public || return 1
   vpkg_init_defaults
   
-  # ensure we have a lib dir
-  mkdir -p "$VPKG_HOME"/lib
-  
   # uninstall first if --force
   if [ -n "${opts[2]}" ]
   then
@@ -241,6 +238,7 @@ vpkg_install() {
     # install manually depending on what happened with the recipe
     if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
     then
+      mkdir -p "$lib"
       cp -R "$src" "$lib"/"$build"
     fi
   fi

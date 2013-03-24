@@ -1,2 +1,7 @@
+#
+# a sample package registry
+#
+
+vpkg="file://${VPKG_HOME}/src/vpkg/.vpkg"
 node="file://${VPKG_HOME}/src/vpkg/test/fixtures/node.vpkg"
-httpcat="file://${VPKG_HOME}/src/httpcat/.vpkg"
+httpcat="https://raw.github.com/jessetane/httpcat/master/.vpkg"
