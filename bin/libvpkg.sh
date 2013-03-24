@@ -247,7 +247,7 @@ vpkg_install() {
   # auto link if --link or no builds are already linked
   if [ -n "${opts[1]}" ] || [ ! -e "$lib"/"$link_name" ]
   then
-    vpkg_link "$name" "$build"
+    vpkg link "$name" "$build"
   else
     return 0
   fi
