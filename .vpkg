@@ -45,7 +45,7 @@ bootstrap() {
   mkdir -p "$bin"
   
   # autogenerate a sourceable profile
-  # file and just put it in the root
+  # file and put it in VPKG_HOME
   profile > "$VPKG_HOME"/.vpkgrc
   
   # install dependency: argue
