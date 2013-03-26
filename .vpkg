@@ -31,6 +31,7 @@ install() {
 bootstrap() {
   
   # vars
+  VPKG_HOME="$(pwd)"
   name="vpkg"
   build="default"
   version="$(version)"
@@ -39,8 +40,19 @@ bootstrap() {
   lib="$VPKG_HOME"/lib/"$name"
   
   # sanity
-  [ -z "$VPKG_HOME" ] && echo "VPKG_HOME is not defined" >&2 && return 1
   [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here" >&2 && return 1
+  
+  # are you sure?
+  {
+    echo "---- welcome to vpkg ----"
+    echo "you are about to bootstrap vpkg into $VPKG_HOME"
+    read -a proceed -p "are you sure? [Y/n]: "
+    if [ "$proceed" = "n" ] || [ "$proceed" = "N" ]
+    then
+      echo "vpkg bootstrap aborted" >&2
+      return 1
+    fi
+  }
   
   # make some dirs
   mkdir -p "$src"
