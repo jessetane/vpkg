@@ -186,11 +186,11 @@ vpkg_follow_recipe() {
     # if version = default, see if the recipe provides a default
     if [ "$version" = "default" ]
     then
-      temp="$(/bin/sh "$recipe" version)" && version="$temp"
+      temp="$(bash "$recipe" version)" && version="$temp"
     fi
     
     # follow the recipe
-    /bin/sh "$recipe" "$cmd"
+    bash "$recipe" "$cmd"
     recipe_status="$?"
     
     # check for errors
