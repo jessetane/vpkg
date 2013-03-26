@@ -11,7 +11,8 @@ version() {
 }
 
 install() {
-  mkdir -p "$src" && cd $_
+  mkdir -p "$src"
+  cd "$src"
   
   # get repo
   [ ! -d .git ] && git clone "$(url)" ./
@@ -21,7 +22,8 @@ install() {
   git fetch --tags
   
   # install
-  mkdir -p "$lib"/"$build" && cd $_
+  mkdir -p "$lib"/"$build"
+  cd "$lib"/"$build"
   cp -R "$src"/.git ./
   git reset --hard "$version"
 }
@@ -41,8 +43,9 @@ bootstrap() {
   [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here" >&2 && return 1
   
   # make some dirs
-  mkdir -p "$src" && cd $_
+  mkdir -p "$src"
   mkdir -p "$bin"
+  cd "$src"
   
   # autogenerate a sourceable profile
   # file and put it in VPKG_HOME
@@ -84,6 +87,9 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 . vpkg.sh
 '
 }
+
+# safe mode
+set -e
 
 # run or bootstrap
 if [ -n "$1" ]
