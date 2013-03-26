@@ -65,11 +65,8 @@ bootstrap() {
   . "$VPKG_HOME"/.vpkgrc
   
   # now we are self hosted, so do proper installation
-  echo "1 $lib"
   vpkg install argue
-  echo "2 $lib"
   vpkg install vpkg
-  echo "3 $lib"
 }
 
 profile() {
@@ -90,9 +87,6 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 . vpkg.sh
 '
 }
-
-# safe mode
-set -e
 
 # run or bootstrap
 if [ -n "$1" ]

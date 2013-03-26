@@ -169,6 +169,9 @@ vpkg_get_recipe() {
     echo "$name: downloading recipe from $recipe_url..."
     curl -fL# "$recipe_url" -o "$recipe" || return 1
   fi
+  
+  # if we get here, it worked
+  return 0
 }
 
 vpkg_follow_recipe() {
@@ -250,9 +253,10 @@ vpkg_install() {
     vpkg link "$name" "$build"
     echo "$PATH" > "$ipcfile"
     return 78
-  else
-    return 0
   fi
+  
+  # if we get here, it worked
+  return 0
 }
 
 vpkg_uninstall() {
