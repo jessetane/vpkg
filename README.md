@@ -14,6 +14,9 @@ Started out as a project to improve my bash scripting...
 ## How
 Sourcable shell script.
 
+## Install
+`curl "https://raw.github.com/jessetane/vpkg/refactor/.vpkg" | VPKG_HOME=~ bash`
+
 ## Dependencies
 bash
 mktemp
