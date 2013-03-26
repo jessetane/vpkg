@@ -65,8 +65,11 @@ bootstrap() {
   . "$VPKG_HOME"/.vpkgrc
   
   # now we are self hosted, so do proper installation
+  echo "1 $lib"
   vpkg install argue
+  echo "2 $lib"
   vpkg install vpkg
+  echo "3 $lib"
 }
 
 profile() {
