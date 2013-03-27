@@ -23,7 +23,7 @@ vpkg() {
     # vars
     args=("$@")
     cmd="$1" && shift
-    vpkg_init_private
+    _vpkg_init_private
     
     case "$cmd" in
       
