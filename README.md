@@ -12,19 +12,27 @@ A language agnostic, version oriented package manager.
 Started out as a project to learn bash scripting...
 
 ## How
-Sourcable shell script.
+Sourcable shell scripts.
 
 ## Install
 `curl "https://raw.github.com/jessetane/vpkg/refactor/.vpkg" | bash`
 
 ## Usage
-* braces indicate an [<argument>] is optional
-vpkg get https://github.com/jessetane/httpcat.git [<name>]      # acquire teh source code
-     build <package> <build> [<version>]                        # create a build
-     install <package> <build>                                  # links files into PKG_HOME/bin
-     uninstall <package> [<build>]                              # ..
-     load <package> [<build>]                                   # updates your PATH
-     unload httpcat                                             # ..
+`vpkg <command> [options] [arguements]`
+Commands:
+* `update [<package>]`
+* `lookup <package>`
+* `add <remote-package> [<package>]  
+    <url> [<package>]`
+* `rm <package>`
+* `build <package> [<build>] [<version>]  
+      <url> [<package>] [<build>] [<version>]`
+* `destroy <package> [<build>]`
+* `install <package> [<build>] [<version>]  
+        <url> [<package>] [<build>] [<version>] `
+* `uninstall <package> [<build>]`
+* `load <package> [<build>]`
+* `unload <package>`
 ```
 
 ## Dependencies

@@ -26,7 +26,7 @@ vpkg() {
     vpkg_init_common
     
     case "$cmd" in
-
+      
       # public sub commands
       "update") vpkg_update "$@";;
       "lookup") vpkg_lookup "$@";;
