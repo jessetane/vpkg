@@ -226,7 +226,7 @@ vpkg_unlink() {
   argue || return 1
   
   # init
-  vpkg_init_public || return 1
+  vpkg_init_common || return 1
   old_link="$(readlink "$lib"/"$link_name")"
   
   # nothing to do if no builds are linked
