@@ -199,7 +199,7 @@ vpkg_link() {
   
     # linking happens differently depending on whether the file is executable
     if [ -x "$lib"/"$build"/bin/"$executable" ]; then
-  
+    
       # link via exec
       echo "exec ${lib}/${build}/bin/$executable "'$@' > "$dest"
       chmod +x "$dest"

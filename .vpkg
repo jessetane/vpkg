@@ -76,8 +76,8 @@ bootstrap() {
   . "$VPKG_HOME"/.vpkgrc
   
   # now we are self hosted, so do proper installation
-  vpkg install argue
-  vpkg install vpkg
+  # vpkg install argue
+  # vpkg install vpkg
 }
 
 profile() {
