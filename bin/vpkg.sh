@@ -23,14 +23,16 @@ vpkg() {
     # vars
     args=("$@")
     cmd="$1" && shift
-    vpkg_init_common
+    vpkg_init_private
     
     case "$cmd" in
       
       # public sub commands
       "update") vpkg_update "$@";;
       "lookup") vpkg_lookup "$@";;
-      "get-recipe") vpkg_get_recipe "$@";;
+      "fetch") vpkg_fetch "$@";;
+      "build") vpkg_build "$@";;
+      "destroy") vpkg_destroy "$@";;
       "install") vpkg_install "$@";;
       "uninstall") vpkg_uninstall "$@";;
       "link") vpkg_link "$@";;

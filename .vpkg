@@ -10,12 +10,7 @@ version() {
   echo "testing"
 }
 
-install() {
-  mkdir -p "$src"
-  cd "$src"
-  
-  # get repo
-  [ ! -d .git ] && git clone "$(url)" ./
+pre_build() {
   
   # checkout code
   git fetch --all
@@ -26,11 +21,15 @@ install() {
   cd "$lib"/"$build"
   cp -R "$src"/.git ./
   git reset --hard "$version"
+  
+  # inform vpkg that we handled the build ourselves
+  echo "$lib"/"$build"
 }
 
 bootstrap() {
   
   # vars
+  [ -z "$SOURCE" ] && SOURCE="https://github.com/jessetane"
   VPKG_HOME="$(pwd)"
   name="vpkg"
   build="default"
@@ -64,11 +63,11 @@ bootstrap() {
   profile > "$VPKG_HOME"/.vpkgrc
   
   # install dependency: argue
-  git clone "https://github.com/jessetane/argue" "$VPKG_HOME"/src/argue
+  git clone "$SOURCE/argue" "$VPKG_HOME"/src/argue
   ln -s "$VPKG_HOME"/src/argue/bin/libargue.sh "$VPKG_HOME"/bin/
   
   # install self
-  git clone "https://github.com/jessetane/vpkg" "$VPKG_HOME"/src/vpkg
+  git clone "$SOURCE/vpkg" "$VPKG_HOME"/src/vpkg
   git reset --hard "$version"
   ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
   ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
@@ -100,10 +99,5 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 '
 }
 
-# run or bootstrap
-if [ -n "$1" ]
-then
-  "$1"
-else
-  bootstrap
-fi
+# bootstrap?
+[ -z "$VPKG_HOME" ] && bootstrap

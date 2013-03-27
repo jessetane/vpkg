@@ -1,16 +1,12 @@
+#!/usr/bin/env bash
 #
 # libvpkg.sh
 #
 
-vpkg_version() {
-  echo "0.0.1"
-}
 
-vpkg_usage() {
-  echo "usage: vpkg <command> [options] <package> [build] [version]"
-}
+# internal methods
 
-vpkg_init_common() {
+_vpkg_init_private() {
   
   # internal vars
   link_name="current"
@@ -18,7 +14,7 @@ vpkg_init_common() {
   recipe_cache="$VPKG_HOME"/etc/vpkg/recipes
 }
 
-vpkg_init_public() {
+_vpkg_init_common() {
   
   # positional args
   export cmd
@@ -42,380 +38,315 @@ vpkg_init_public() {
   fi
 }
 
-vpkg_init_defaults() {
+_vpkg_init_defaults() {
   [ -z "$build" ] && export build="default"
   [ -z "$version" ] && export version="$build"
 }
 
-vpkg_update() {
-  args=("$@")
-  argue "-r, --registry-url, +" || return 1
+_vpkg_run_hook() {
+  local recipe="$recipe_cache"/"$name"
+  local status=0
   
-  i=0
-  registries="$VPKG_REGISTRIES"
+  if [ -e "$recipe" ]; then
   
-  # respect --registry-url option
-  [ -n "${opts[0]}" ] && registries="${opts[0]}"
-  
-  # sanity
-  [ -z "$registries" ] && echo "specify a registry url with --registry-url or define VPKG_REGISTRIES" >&2 && return 1
-  
-  # make sure self/etc and our tmp download dir exist
-  mkdir -p "$registry_cache"/tmp
-  
-  # loop over registry urls
-  while read registry
-  do
+    # run in subshell for safety
+    (
+      # make dir
+      mkdir -p "$src"
+      cd "$src"
+      
+      # ensure our hooks are clean - eval should be safe here
+      eval "${1}() { return 127; }"
+      version() { return 127; }
+      
+      # source recipe
+      . "$recipe"
     
-    # download your registries and cache them in self/etc/registries
-    # ensure ordering is respected by renaming the files
-    curl -fL# "$registry" -o "$registry_cache"/tmp/"$((i++)).registry"
+      # if version = default, see if the recipe provides a default
+      if [ "$version" = "default" ]; then
+        temp="$(version)" && version="$temp"
+      fi
     
-    # don't continue if there was an error
-    if [ $? != 0 ]
-    then
-      error=true
-      break
-    fi
-  
-  done < <(echo "$registries")
-  
-  # if there were no errors, blow away old
-  # registries and copy over the new ones
-  if [ "$error" != true ]
-  then
-    rm -f "$registry_cache"/*.registry
-    cp "$registry_cache"/tmp/* "$registry_cache"/
+      # run hook
+      "$1"
+      status="$?"
+      
+      # command not found is OK
+      [ "$status" = 127 ] && status=0
+    )
   fi
   
-  # blow away our download dir
-  rm -rf "$registry_cache"/tmp
+  # return adjusted status
+  return "$status"
+}
+
+
+# public methods 
+
+vpkg_version() {
+  echo "0.0.1"
+}
+
+vpkg_usage() {
+  echo "usage: vpkg <command> [options] <package> [build] [version]"
+}
+
+vpkg_update() {
+  echo "$cmd: not implemented"
 }
 
 vpkg_lookup() {
+  echo "$cmd: not implemented"
+}
+
+vpkg_fetch() {
+  
+  # args/opts
   args=("$@")
   argue || return 1
-  vpkg_init_public || return 1
+  name="${args[0]}"
+  source_name="${args[1]}"
   
-  # update registries if the cache is empty
-  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
-  then
-    vpkg_update &> /dev/null || {
-      echo 'warning: no registries found. try running `vpkg update`' >&2
-      return 1
-    }
-  fi
-  
-  # attempt to lookup a url for $name from your registries
-  while read registry
-  do
-  
-    # in a subshell, source the registry and do a lookup
-    recipe_url="$(
-      unset "$name";
-      source "$registry_cache/$registry";
-      [ -n "${!name}" ] && echo "${!name}"
-    )"
-    
-    # if we found a url, break out of the loop
-    [ -n "$recipe_url" ] && break
-  
-  done < <(ls "$registry_cache")
-  
-  # if we didn't get a url, that's an error
-  [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
-  
-  # print url to stdout
-  echo "$recipe_url"
+  # 
 }
 
-vpkg_get_recipe() {
+# vpkg build [<options>] <package|url> [<build>] [<version>]
+vpkg_build() {
+  
+  # args/opts
   args=("$@")
-  argue "-r, --recipe-url, +" || return 1
-  vpkg_init_public || return 1
+  argue "-n, --name, +"\
+        "-r, --rebuild" || return 1
+  source_name="${opts[0]}"
+  rebuild="${opts[1]}"
   
-  recipe_url="${opts[0]}"
-  recipe="$recipe_cache"/"$name"
+  # init
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
   
-  # ensure recipe cache exists
-  mkdir -p "$recipe_cache"
+  # main
+  vpkg fetch "$name" "$source_name" || return 1
+  [ -n "$rebuild" ] && vpkg destroy "$name" "$build"
   
-  # are we missing a recipe url?
-  if [ -z "$recipe_url" ]
-  then
-    
-    # we only need to lookup a recipe url
-    # if we don't already have a recipe
-    if [ ! -e "$recipe" ]
-    then
-      recipe_url="$(vpkg_lookup "$name" 2> "$ipcfile")" || {
-        
-        # it's possible to build recipeless
-        # packages if they have source files
-        if [ -e "$src" ] && [ -n "$(ls -A "$src")" ]
-        then
-          echo "$name: no recipe found, so just installing the raw source..." >&2
-        else
-          cat "$ipcfile" >&2
-          return 1
-        fi
-      }
-    fi
+  # only build if we have to
+  if [ ! -e "$lib"/"$build" ]; then
+    build_location="$(_vpkg_run_hook "pre_build")" || return $?
+    [ -z "$build_location" ] && build_location="$src"
+    [ "$build_location" != "$lib"/"$build" ] && cp -R "$build_location" "$lib"/"$build"
+    _vpkg_run_hook "post_build" || return $?
   fi
   
-  # if we get here and have a recipe_url we should try to download it
-  if [ -n "$recipe_url" ]
-  then
-    echo "$name: downloading recipe from $recipe_url..."
-    curl -fL# "$recipe_url" -o "$recipe" || return 1
-  fi
-  
-  # if we get here, it worked
+  # if we get here it worked
   return 0
 }
 
-vpkg_follow_recipe() {
-  recipe="$recipe_cache"/"$name"
-  unset recipe_status
+# vpkg destroy <package> [<build>]
+vpkg_destroy() {
   
-  if [ -e "$recipe" ]
-  then
-  
-    # ensure our hookname is clean
-    # XXX: i THINK eval is safe here...
-    # XXX: export -f might be a bashism...
-    eval "${cmd}() { return 127; }; export -f $cmd;"
-    
-    # if version = default, see if the recipe provides a default
-    if [ "$version" = "default" ]
-    then
-      temp="$(bash "$recipe" version)" && version="$temp"
-    fi
-    
-    # follow the recipe
-    bash "$recipe" "$cmd"
-    recipe_status="$?"
-    
-    # check for errors
-    if [ "$recipe_status" != 0 ]
-    then
-      
-      # if the recipe returned 127 (command not found)
-      # continue instead of just returning the error
-      [ "$recipe_status" != 127 ] && return "$recipe_status"
-    fi
-  fi
-  
-  # if we get here, it worked
-  return 0
-}
-
-vpkg_install() {
-  args=("$@")
-  argue "-r, --recipe-url, +"\
-        "-l, --link"\
-        "-f, --force" || return 1
-  vpkg_init_public || return 1
-  vpkg_init_defaults
-  
-  # uninstall first if --force
-  if [ -n "${opts[2]}" ]
-  then
-    vpkg uninstall "$name" "$build"
-  
-  # if not forced, no build was spec'd, and a build is already linked, just return
-  elif [ "$build" = "default" ] && [ -e "$lib"/"$link_name" ]
-  then
-    return 0
-  fi
-  
-  # are we missing the build?
-  if [ ! -e "$lib"/"$build" ]
-  then
-    
-    # try to get a recipe
-    vpkg get-recipe "$name" --recipe-url "${opts[0]}" || return 1
-    
-    # follow recipe
-    vpkg_follow_recipe || return $?
-    
-    # install manually if no recipe or command not found
-    if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
-    then
-      mkdir -p "$lib"
-      cp -R "$src" "$lib"/"$build"
-    fi
-  fi
-  
-  # auto link if --link or no builds are already linked
-  if [ -n "${opts[1]}" ] || [ ! -e "$lib"/"$link_name" ]
-  then
-    vpkg link "$name" "$build"
-    echo "$PATH" > "$ipcfile"
-    return 78
-  fi
-  
-  # if we get here, it worked
-  return 0
-}
-
-vpkg_uninstall() {
+  # args/opts
   args=("$@")
   argue || return 1
-  vpkg_init_public || return 1
   
-  # sanity
-  [ -z "$(ls -A "$lib" 2> /dev/null)" ] && echo "$name: no builds installed" >&2 && return 1
+  # init
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
   
-  # unlink
-  vpkg unlink "$name" "$build" &> /dev/null
+  # main
+  vpkg unload "$@"
+  vpkg unlink "$@"
+  _vpkg_run_hook "pre_destroy" || return $?
+  rm -rf "$lib"/"$build"
+  _vpkg_run_hook "post_destroy" || return $?
   
-  # set defaults - be sure to do this after unlinking
-  vpkg_init_defaults
-  
-  # hook
-  vpkg_follow_recipe || return $?
-  
-  # uninstall manually if no recipe or command not found
-  if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
-  then
-    [ -e "$lib"/"$build" ] && rm -rf "$lib"/"$build"
-  fi
-  
-  # remove $name if no more builds
-  [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
-  
-  # if we get here, it worked but we should update PATH
+  # update PATH
   echo "$PATH" > "$ipcfile"
   return 78
 }
 
+# vpkg link <package> [<build>]
 vpkg_link() {
+  
+  # args/opts
   args=("$@")
   argue || return 1
-  vpkg_init_public || return 1
-  vpkg_init_defaults
   
-  # sanity
+  # init
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
+  
+  # error if build doesn't exist
   [ ! -e "$lib"/"$build" ] && echo "$name/$build: build is not installed" >&2 && return 1
   
-  # unlink any builds already linked
+  # nothing to do if already linked
+  [ -e "$lib"/"$link_name" ] && [ "$(readlink "$lib"/"$link_name")" = "$build" ] && return 0
+  
+  # unlink any other linked builds for this package
   vpkg unlink "$name"
   
-  # recipe
-  vpkg_follow_recipe || return $?
+  # event
+  _vpkg_run_hook "pre_link" || return $?
   
-  # link manually if no recipe or command not found
-  if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
-  then
+  # create link
+  ln -sf "$lib"/"$build" "$lib"/"$link_name"
   
-    # create link
-    ln -sf "$lib"/"$build" "$lib"/"$link_name"
+  # create executables
+  local executable
+  ls "$lib"/"$build"/bin | while read executable; do
+    local dest="$VPKG_HOME"/bin/"$executable"
   
-    # create executables
-    local executable
-    ls "$lib"/"$build"/bin | while read executable
-    do
-      local dest="$VPKG_HOME"/bin/"$executable"
+    # linking happens differently depending on whether the file is executable
+    if [ -x "$lib"/"$build"/bin/"$executable" ]; then
+  
+      # link via exec
+      echo "exec ${lib}/${build}/bin/$executable "'$@' > "$dest"
+      chmod +x "$dest"
+    else
     
-      # linking happens differently depending on whether the file is executable
-      if [ -x "$lib"/"$build"/bin/"$executable" ]
-      then
-    
-        # link via exec
-        echo "exec ${lib}/${build}/bin/$executable "'$@' > "$dest"
-        chmod +x "$dest"
-      else
-      
-        # soft link
-        ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
-      fi
-    done
-  fi
+      # soft link
+      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
+    fi
+  done
+
+  # event
+  _vpkg_run_hook "post_link" || return $?
   
-  # PATH needs updating
+  # update PATH
   echo "$PATH" > "$ipcfile"
   return 78
 }
 
+# vpkg unlink <package> [<build>]
 vpkg_unlink() {
+  
+  # args/opts
   args=("$@")
   argue || return 1
-  vpkg_init_public || return 1
   
+  # init
+  vpkg_init_public || return 1
   old_link="$(readlink "$lib"/"$link_name")"
   
+  # nothing to do if no builds are linked
+  if [ "$?" != 0 ]; then
+    return 0
+    
   # if a build was specified, check to ensure it's actually linked
-  if [ -n "$build" ] && [ "$old_link" != "$lib"/"$build" ]
-  then
+  elif [ -n "$build" ] && [ "$old_link" != "$lib"/"$build" ]; then
     echo "$name/$build: build is not linked" >&2
     return 1
   fi
   
-  # recipe
-  vpkg_follow_recipe || return $?
+  # event
+  _vpkg_run_hook "pre_unlink" || return $?
   
-  # unlink manually if no recipe or command not found
-  if [ -z "$recipe_status" ] || [ "$recipe_status" = 127 ]
-  then
+  # remove link
+  rm -rf "$lib"/"$link_name"
+
+  # remove old executables
+  ls "$old_link"/bin | while read executable; do
+    rm -rf "$VPKG_HOME"/bin/"$executable"
+  done
   
-    # remove link
-    rm -rf "$lib"/"$link_name"
+  # event
+  _vpkg_run_hook "post_unlink" || return $?
   
-    # remove old executables
-    ls "$old_link"/bin | while read executable
-    do
-      rm -rf "$VPKG_HOME"/bin/"$executable"
-    done
+  # update PATH
+  echo "$PATH" > "$ipcfile"
+  return 78
+}
+
+# vpkg install [<options>] <package|url> [<build>] [<version>]
+vpkg_install() {
+  
+  # args/opts
+  args=("$@")
+  argue "-n, --name, +"\
+        "-r, --rebuild" || return 1
+  
+  # init
+  _vpkg_init_common || return 1
+  
+  # main
+  vpkg build "$@" || return 1
+  vpkg link "$@" || return 1
+  
+  # update PATH
+  echo "$PATH" > "$ipcfile"
+  return 78
+}
+
+# vpkg uninstall [<options>] <package> [<build>]
+vpkg_uninstall() {
+  
+  # args/opts
+  args=("$@")
+  argue "-d, --destroy" || return 1
+  destroy="${opts[0]}"
+  
+  # init
+  _vpkg_init_common || return 1
+  
+  # main
+  vpkg unload "${args[@]}"
+  vpkg unlink "${args[@]}"
+  [ -n "$destroy" ] && vpkg destroy "$@"
+  
+  # update PATH
+  echo "$PATH" > "$ipcfile"
+  return 78
+}
+
+# vpkg load [options] <package|url> [<build>] [<version>]
+vpkg_load() {
+  
+  # args/opts
+  args=("$@")
+  argue "-n, --name, +" || return 1
+  name="${opts[0]}"
+  
+  # init
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
+  
+  # don't load if already loaded
+  echo "$PATH" | grep -q "$lib/$build/bin" && return 0
+  
+  vpkg unload "$name"
+  vpkg build "$@"
+  
+  # main
+  _vpkg_run_hook "pre_load" || return $?
+  [ -n "$PATH" ] && PATH=":$PATH" # don't place a ":" at the end of PATH
+  PATH="$lib"/"$build"/bin"$PATH" # add package/version/bin to PATH
+  _vpkg_run_hook "post_load" || return $?
+  
+  # update PATH
+  echo "$PATH" > "$ipcfile"
+  return 78
+}
+
+# vpkg unload <package> [<build>]
+vpkg_unload() {
+  
+  # args
+  args=("$@")
+  argue || return 1
+  
+  # init
+  _vpkg_init_common || return 1
+  
+  # don't unload unless loaded
+  if [ -n "$build" ]; then
+    echo "$PATH" | grep -q "$lib/$build/bin" || return 0
   fi
   
-  # PATH needs updating
-  echo "$PATH" > "$ipcfile"
-  return 78
-}
-
-vpkg_load() {
-  args=("$@")
-  argue || return 1
-  vpkg_init_public || return 1
-  vpkg_init_defaults
-  
-  # prefer a linked build to a default build if there is one
-  [ "$build" = "$default" ] && [ -e "$lib"/"$link_name" ] && build="$link_name"
-  
-  # sanity
-  [ ! -e "$lib"/"$build" ] && echo "$name/$build: build is not installed" >&2 && return 1
-  
-  # unload any currently loaded versions first
-  vpkg unload "$name"
-  
-  # recipe - event only
-  vpkg_follow_recipe || return $?
-  
-  # don't place a ":" at the end of PATH
-  [ -n "$PATH" ] && PATH=":$PATH"
-
-  # add package/version/bin to PATH
-  PATH="$lib"/"$build"/bin"$PATH"
-  
-  # PATH needs updating
-  echo "$PATH" > "$ipcfile"
-  return 78
-}
-
-vpkg_unload() {
-  args=("$@")
-  argue || return 1
-  vpkg_init_public || return 1
-  
-  # recipe - event only
-  vpkg_follow_recipe || return $?
-  
-  # remove package/build from PATH
+  # main
+  _vpkg_run_hook "pre_unload" || return $?
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
+  _vpkg_run_hook "post_unload" || return $?
   
-  # PATH needs updating
+  # update PATH
   echo "$PATH" > "$ipcfile"
   return 78
 }

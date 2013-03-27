@@ -1,4 +1,9 @@
-src="/Users/jessetane/Dropbox/software/src/vpkg"
-#rm -rf "$src"/test/tmp
-#mkdir -p "$src"/test/tmp
-curl -fL# "file://$src"/.vpkg | { bash; }
+#
+# test.sh
+#
+
+src="/Users/jessetane/Dropbox/software/src"
+rm -rf "$src"/vpkg/test/tmp
+mkdir -p "$src"/vpkg/test/tmp
+cd "$src"/vpkg/test/tmp
+curl -fL# "file://$src"/vpkg/.vpkg | SOURCE="file://$src" bash
