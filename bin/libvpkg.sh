@@ -130,9 +130,12 @@ vpkg_build() {
   
   # only build if we have to
   if [ ! -e "$lib"/"$build" ]; then
+    mkdir -p "$lib"
     build_location="$(_vpkg_run_hook "pre_build")" || return $?
     [ -z "$build_location" ] && build_location="$src"
-    [ "$build_location" != "$lib"/"$build" ] && cp -R "$build_location" "$lib"/"$build"
+    [ "$build_location" != "$lib"/"$build" ] && {
+      cp -R "$build_location" "$lib"/"$build"
+    }
     _vpkg_run_hook "post_build" || return $?
   fi
   
