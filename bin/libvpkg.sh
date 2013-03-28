@@ -262,6 +262,7 @@ vpkg_destroy() {
   if [ -e "$lib"/"$build" ]; then
     _vpkg_hook "pre_destroy" || return $?
     rm -rf "$lib"/"$build"
+    [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
     _vpkg_hook "post_destroy" || return $?
   else
     echo "$name/$build: not built" >&2
