@@ -177,10 +177,8 @@ vpkg_fetch() {
   
   # recipe (shell script)?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
-    echo "WOW: $download - $name - $rename"
-    return 1
     mkdir -p "$recipe_cache"
-    cp "$download" "$recipe_cache"/"$rename"
+    cp "$download" "$recipe_cache"/"$name"
   
   # tarball?
   elif echo "$filetype" | grep -q "gzip compressed"; then
@@ -189,7 +187,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls)"
-    mv "$download" "$dest"
+    mv "$download" "$src"
   
   # zip archive?
   elif echo "$filetype" | grep -q "Zip archive"; then
@@ -198,7 +196,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls)"
-    mv "$download" "$dest"
+    mv "$download" "$src"
     
   # unknown
   else
@@ -226,7 +224,6 @@ vpkg_build() {
   
   # get source or recipe
   vpkg fetch "$name" --url "$url" || return 1
-  [ -n "$rename" ] && name="$rename"
   
   # destroy if --rebuild
   [ -n "$rebuild" ] && vpkg destroy "$name" "$build"
