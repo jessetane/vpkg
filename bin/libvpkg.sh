@@ -146,7 +146,7 @@ vpkg_fetch() {
       [ -n "$url" ] && echo "$name: source code exists, ignoring --url option" >&2
       return 0
     fi
-  done < <(ls "$VPKG_HOME"/src)
+  done < <(ls -A "$VPKG_HOME"/src)
   
   # if we don't have a url, try to look one up
   if [ -z "$url" ]; then
@@ -172,7 +172,8 @@ vpkg_fetch() {
   }
   
   # what'd we get?
-  download="$(ls)"
+  download="$(ls -A)"
+  echo "wtf: $download"
   filetype="$(file "$download" | sed "s/.*: //")"
   
   # recipe (shell script)?
@@ -186,7 +187,7 @@ vpkg_fetch() {
       rm -rf "$tmp" && return 1
     }
     rm "$download"
-    download="$(ls)"
+    download="$(ls -A)"
     mv "$download" "$src"
   
   # zip archive?
@@ -195,7 +196,7 @@ vpkg_fetch() {
       rm -rf "$tmp" && return 1
     }
     rm "$download"
-    download="$(ls)"
+    download="$(ls -A)"
     mv "$download" "$src"
     
   # unknown
@@ -307,7 +308,7 @@ vpkg_link() {
   ln -sf "$lib"/"$build" "$lib"/"$link_name"
   
   # create executables
-  ls "$lib"/"$build"/bin | while read executable; do
+  ls -A "$lib"/"$build"/bin | while read executable; do
     local dest="$VPKG_HOME"/bin/"$executable"
   
     # linking happens differently depending on whether the file is executable
@@ -355,7 +356,7 @@ vpkg_unlink() {
   rm "$lib"/"$link_name"
 
   # remove old executables
-  ls "$old_link"/bin | while read executable; do
+  ls -A "$old_link"/bin | while read executable; do
     rm "$VPKG_HOME"/bin/"$executable"
   done
   
@@ -502,7 +503,7 @@ vpkg_lookup() {
     # if we found a url, break out of the loop
     [ -n "$recipe_url" ] && break
   
-  done < <(ls "$registry_cache")
+  done < <(ls -A "$registry_cache")
   
   # if we didn't get a url, that's an error
   [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
