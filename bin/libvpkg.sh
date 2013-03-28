@@ -100,8 +100,9 @@ vpkg_usage() {
 # vpkg install [<options>] <package|url> [<build>] [<version>]
 vpkg_install() {
   args=("$@")
-  argue "-n, --name, +"\
+  argue "-u, --url, +"\
         "-r, --rebuild" || return 1
+        
   _vpkg_init_common || return 1
   
   # main
@@ -118,6 +119,7 @@ vpkg_uninstall() {
   args=("$@")
   argue "-d, --destroy" || return 1
   destroy="${opts[0]}"
+  
   _vpkg_init_common || return 1
   _vpkg_init_defaults
   
@@ -133,85 +135,79 @@ vpkg_uninstall() {
 
 vpkg_fetch() {
   args=("$@")
-  argue || return 1
+  argue "-u, --url, +" || return 1
+  url="${opts[0]}"
   name="${args[0]}"
-  rename="${args[1]}"
-  [ -z "$rename" ] && rename="$name"
   src="$VPKG_HOME"/src/"$name"
-  dest="$VPKG_HOME"/src/"$rename"
   
-  # have we already got what we need?
-  have_source=false
+  # do we already have source code?
   while read package; do
     if [ "$package" = "$name" ]; then
-      if [ "$name" != "$rename" ]; then
-        cp -R "$src" "$dest"
-      fi
-      have_source=true && break
+      [ -n "$url" ] && echo "$name: source code exists, ignoring --url option" >&2
+      return 0
     fi
   done < <(ls "$VPKG_HOME"/src)
   
-  # if we don't have the source, $name needs to be 
-  # registered, or a valid git/zip/tar/recipe url
-  if [ "$have_source" = false ]; then
-    
-    # is it registered?
-    #url="$(vpkg lookup "$name")" || url="$name"
-    url="$name"
-    
-    # is it git?
-    git ls-remote "$url" &> /dev/null && {
-      git clone "$url" "$dest"
-      return 0
-    }
-    
-    # hm, let's try to download it
-    tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
-      echo "fetch: could not create temporary directory" >&2 && return 1
-    }
-    cd "$tmp"
-    curl -fLO# "$url" || { 
-      rm -rf "$tmp" && return 1
-    }
-    download="$(ls)"
-    
-    # what'd we get?
-    filetype="$(file "$download")"
-    
-    # recipe (shell script)?
-    if echo "$filetype" | grep "\(shell\|bash\|zsh\).*executable"; then
-      echo "WOW: $download - $name - $rename"
+  # if we don't have a url, try to look one up
+  if [ -z "$url" ]; then
+    url="$(vpkg lookup "$name")" || {
+      echo "$name"': package not registered, try passing a --url' >&2
       return 1
-      mkdir -p "$recipe_cache"
-      cp "$download" "$recipe_cache"/"$rename"
-    
-    # tarball?
-    elif echo "$filetype" | grep "gzip compressed"; then
-      tar -xvzf "$download" || {
-        rm -rf "$tmp" && return 1
-      }
-      rm "$download"
-      download="$(ls)"
-      mv "$download" "$dest"
-    
-    # zip archive?
-    elif echo "$filetype" | grep "Zip archive"; then
-      unzip "$download" || {
-        rm -rf "$tmp" && return 1
-      }
-      rm "$download"
-      download="$(ls)"
-      mv "$download" "$dest"
-      
-    # unknown
-    else
-      echo "fetch: unknown filetype: $filetype" >&2
-      rm -rf "$tmp" && return 1
-    fi
-    
-    # remove tmp download dir
-    rm -rf "$tmp"
+    }
   fi
+    
+  # is it git?
+  git ls-remote "$url" &> /dev/null && {
+    git clone "$url" "$src"
+    return 0
+  }
+  
+  # try to download
+  tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
+    echo "fetch: could not create temporary directory" >&2 && return 1
+  }
+  cd "$tmp"
+  curl -fLO# "$url" || {
+    rm -rf "$tmp" && return 1
+  }
+  
+  # what'd we get?
+  download="$(ls)"
+  filetype="$(file "$download" | sed "s/.*: //")"
+  
+  # recipe (shell script)?
+  if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
+    echo "WOW: $download - $name - $rename"
+    return 1
+    mkdir -p "$recipe_cache"
+    cp "$download" "$recipe_cache"/"$rename"
+  
+  # tarball?
+  elif echo "$filetype" | grep -q "gzip compressed"; then
+    tar -xvzf "$download" || {
+      rm -rf "$tmp" && return 1
+    }
+    rm "$download"
+    download="$(ls)"
+    mv "$download" "$dest"
+  
+  # zip archive?
+  elif echo "$filetype" | grep -q "Zip archive"; then
+    unzip "$download" || {
+      rm -rf "$tmp" && return 1
+    }
+    rm "$download"
+    download="$(ls)"
+    mv "$download" "$dest"
+    
+  # unknown
+  else
+    echo "fetch: unknown filetype: $filetype" >&2
+    rm -rf "$tmp" && return 1
+  fi
+  
+  # remove tmp download dir
+  rm -rf "$tmp"
   
   # if we got here, it worked
   return 0
@@ -220,15 +216,16 @@ vpkg_fetch() {
 # vpkg build [<options>] <package|url> [<build>] [<version>]
 vpkg_build() {
   args=("$@")
-  argue "-n, --name, +"\
+  argue "-u, --url, +"\
         "-r, --rebuild" || return 1
-  rename="${opts[0]}"
+  url="${opts[0]}"
   rebuild="${opts[1]}"
+  
   _vpkg_init_common || return 1
   _vpkg_init_defaults
   
   # get source or recipe
-  vpkg fetch "$name" "$rename" || return 1
+  vpkg fetch "$name" --url "$url" || return 1
   [ -n "$rename" ] && name="$rename"
   
   # destroy if --rebuild
@@ -257,6 +254,7 @@ vpkg_build() {
 vpkg_destroy() {
   args=("$@")
   argue || return 1
+  
   _vpkg_init_common || return 1
   _vpkg_init_defaults
   
@@ -281,6 +279,7 @@ vpkg_destroy() {
 vpkg_link() {
   args=("$@")
   argue || return 1
+  
   _vpkg_init_common || return 1
 
   # is anything suitable already linked?
@@ -339,6 +338,7 @@ vpkg_link() {
 vpkg_unlink() {
   args=("$@")
   argue || return 1
+  
   _vpkg_init_common || return 1
   
   # follow the current link or just return if no builds are linked
@@ -373,8 +373,8 @@ vpkg_unlink() {
 # vpkg load [options] <package|url> [<build>] [<version>]
 vpkg_load() {
   args=("$@")
-  argue "-n, --name, +" || return 1
-  name="${opts[0]}"
+  argue "-u, --url, +" || return 1
+  
   _vpkg_init_common || return 1
     
   # is anything suitable already loaded?
@@ -407,6 +407,7 @@ vpkg_load() {
 vpkg_unload() {
   args=("$@")
   argue || return 1
+  
   _vpkg_init_common || return 1
   
   # don't unload unless loaded
@@ -476,6 +477,7 @@ vpkg_update() {
 vpkg_lookup() {
   args=("$@")
   argue || return 1
+  
   vpkg_init_public || return 1
   
   # update registries if the cache is empty
