@@ -145,10 +145,12 @@ vpkg_fetch() {
   ls "$VPKG_HOME"/src | while read package; do
     echo "whoa: $package == $name"
     if [ "$package" = "$name" ]; then
-      have_source=true
       if [ "$name" != "$rename" ]; then
         cp -R "$src" "$dest"
       fi
+      echo "SHOULD DO IT"
+      have_source=true
+      break
     fi
   done
   
