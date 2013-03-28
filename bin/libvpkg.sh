@@ -216,6 +216,9 @@ vpkg_build() {
   args=("$@")
   argue "-u, --url, +"\
         "-r, --rebuild" || return 1
+  echo "args: ${args[@]}"
+  echo "opts: ${opts[@]}"
+        
   url="${opts[0]}"
   rebuild="${opts[1]}"
   
@@ -233,7 +236,6 @@ vpkg_build() {
     mkdir -p "$lib"
     
     _vpkg_hook "pre_build" || return  $?
-    echo "wow: $?"
     
     build_location="$(< "$intercom")"
     [ -z "$build_location" ] && build_location="$src"
