@@ -143,18 +143,13 @@ vpkg_fetch() {
   # have we already got what we need?
   have_source=false
   while read package; do
-    echo "whoa: $package == $name"
     if [ "$package" = "$name" ]; then
       if [ "$name" != "$rename" ]; then
         cp -R "$src" "$dest"
       fi
-      echo "SHOULD DO IT"
-      have_source=true
-      break
+      have_source=true && break
     fi
   done < <(ls "$VPKG_HOME"/src)
-  
-  echo "hey: $have_source"
   
   # if we don't have the source, $name needs to be 
   # registered, or a valid git/zip/tar/recipe url
