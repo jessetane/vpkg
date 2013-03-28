@@ -475,15 +475,17 @@ vpkg_update() {
 }
 
 vpkg_lookup() {
+  return 1
+  
   args=("$@")
   argue || return 1
   
-  vpkg_init_public || return 1
+  _vpkg_init_common || return 1
   
   # update registries if the cache is empty
   if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
   then
-    vpkg_update &> /dev/null || {
+    vpkg update &> /dev/null || {
       echo 'warning: no registries found. try running `vpkg update`' >&2
       return 1
     }
