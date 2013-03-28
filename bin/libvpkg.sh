@@ -173,7 +173,6 @@ vpkg_fetch() {
   
   # what'd we get?
   download="$(ls -A)"
-  echo "wtf: $download"
   filetype="$(file "$download" | sed "s/.*: //")"
   
   # recipe (shell script)?
