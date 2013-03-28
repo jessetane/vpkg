@@ -57,6 +57,9 @@ _vpkg_hook() {
     
     # run in subshell for safety
     (
+      # bail fast if things go south
+      set -e
+    
       # make dir
       mkdir -p "$src"
       cd "$src"
@@ -102,7 +105,7 @@ vpkg_install() {
   args=("$@")
   argue "-u, --url, +"\
         "-r, --rebuild" || return 1
-        
+  
   _vpkg_init_common || return 1
   
   # main
@@ -156,11 +159,11 @@ vpkg_fetch() {
     }
   fi
     
-  # is it git?
-  git ls-remote "$url" &> /dev/null && {
-    git clone "$url" "$src"
-    return 0
-  }
+  # # is it git?
+  # git ls-remote "$url" &> /dev/null && {
+  #   git clone "$url" "$src"
+  #   return 0
+  # }
   
   # try to download
   tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
@@ -232,14 +235,11 @@ vpkg_build() {
   if [ ! -e "$lib"/"$build" ]; then
     mkdir -p "$lib"
     
-    _vpkg_hook "pre_build" || return  $?
-    
-    build_location="$(< "$intercom")"
+    build_location="$(_vpkg_hook "pre_build")" || return  $?
     [ -z "$build_location" ] && build_location="$src"
     [ "$build_location" != "$lib"/"$build" ] && {
       cp -R "$build_location" "$lib"/"$build"
     }
-    
     _vpkg_hook "post_build" || return $?
   fi
   
