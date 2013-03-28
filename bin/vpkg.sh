@@ -7,11 +7,13 @@ vpkg() {
   # sanity
   [ -z "$VPKG_HOME" ] && echo "VPKG_HOME must be defined" >&2 && return 1
   
+  # ensure tmp
+  mkdir -p "$VPKG_HOME"/tmp
+  
   # make a temporary file in case we need
   # to communicate with the subprocess
-  mkdir -p "$VPKG_HOME"/tmp
-  local ipcfile="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
-    echo "could not create ipcfile" >&2 && return 1
+  local intercom="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
+    echo "could not create intercom" >&2 && return 1
   }
   
   # execute main in a subshell for environmental safety
@@ -66,13 +68,13 @@ vpkg() {
   # did the command want to update PATH?
   if [ "$status" = 78 ]
   then
-    export PATH="$(cat "$ipcfile")"
+    export PATH="$(cat "$intercom")"
     status=0
   fi
-  
-  # remove ipc file
-  rm "$ipcfile"
-  
+
+  # cleanup
+  rm "$intercom"
+
   # report proper status
   return "$status"
 }

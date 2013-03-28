@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# .vpkg for node
+# .vpkg hooks for node
 #
 
 version() {
@@ -16,32 +16,32 @@ pre_build() {
   archive="$src"/cache/"$fname"
   url="http://nodejs.org/dist/v$version/$fname"
   
-  # download an archive of the requested
-  # version if we don't already have it
-  if [ ! -e "$archive" ]
-  then
+  if [ ! -e "$src"/build/"$build" ]; then
+
+    # download an archive of the requested
+    # version if we don't already have it
+    if [ ! -e "$archive" ]; then
     
-    # ensure dirs exists
-    mkdir -p "$src"/cache
-    mkdir -p "$src"/build
+      # ensure dirs exists
+      mkdir -p "$src"/cache
+      
+      # dl
+      echo "downloading $url..."
+      ! curl -fL# "$url" -o "$archive" && echo "$version: version could not be downloaded" >&2 && return 1
+    fi
     
-    # dl
-    echo "downloading $url..."
-    ! curl -fL# "$url" -o "$archive" && echo "$version: version could not be downloaded" >&2 && return 1
+    # untar
+    mkdir -p "$src"/tmp
+    tar -xvzf "$archive" -C "$src"/tmp &> /dev/null
+    
+    # rename to $build - HACK: some versions untar
+    # to non matching names, but globbing works since
+    # they all seem to at least start with "node"
+    mv "$src"/tmp/node* "$lib"/"$build"
+    
+    rm -rf "$src"/tmp
   fi
   
-  # untar
-  tar -xvzf "$archive" -C "$src"/build &> /dev/null
-  
-  # rename to $build - HACK: some versions untar
-  # to non standard names, but globbing works since
-  # they all seem to at least start with "node"
-  mv "$src"/build/node* "$src"/build/"$build"
-  
-  # 
-  echo "$src"/build/"$build"
+  # TODO: ipc to caller informing them
+  echo "$lib"/"$build" > "$intercom"
 }
-
-# post_build() {
-#   rm -rf "$src"/build/"$build"
-# }
