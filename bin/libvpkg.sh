@@ -160,7 +160,7 @@ vpkg_fetch() {
     url="$name"
     
     # is it git?
-    git ls-remote "$url" && {
+    git ls-remote "$url" &> /dev/null && {
       git clone "$url" "$dest"
       return 0
     }
@@ -178,13 +178,15 @@ vpkg_fetch() {
     # what'd we get?
     filetype="$(file "$download")"
     
-    #
-    if echo "$filetype" | grep -e "\(shell\|bash\|zsh\).*executable"; then
+    # recipe (shell script)?
+    if echo "$filetype" | grep "\(shell\|bash\|zsh\).*executable"; then
+      echo "WOW: $download - $name - $rename"
+      return 1
       mkdir -p "$recipe_cache"
       cp "$download" "$recipe_cache"/"$rename"
     
     # tarball?
-    elif echo "$filetype" | grep -e "gzip compressed"; then
+    elif echo "$filetype" | grep "gzip compressed"; then
       tar -xvzf "$download" || {
         rm -rf "$tmp" && return 1
       }
@@ -193,7 +195,7 @@ vpkg_fetch() {
       mv "$download" "$dest"
     
     # zip archive?
-    elif echo "$filetype" | grep -e "Zip archive"; then
+    elif echo "$filetype" | grep "Zip archive"; then
       unzip "$download" || {
         rm -rf "$tmp" && return 1
       }
