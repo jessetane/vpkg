@@ -216,9 +216,6 @@ vpkg_build() {
   args=("$@")
   argue "-u, --url, +"\
         "-r, --rebuild" || return 1
-  echo "args: ${args[@]}"
-  echo "opts: ${opts[@]}"
-        
   url="${opts[0]}"
   rebuild="${opts[1]}"
   
