@@ -152,7 +152,7 @@ vpkg_fetch() {
       have_source=true
       break
     fi
-  done <(ls "$VPKG_HOME"/src)
+  done < <(ls "$VPKG_HOME"/src)
   
   echo "hey: $have_source"
   
