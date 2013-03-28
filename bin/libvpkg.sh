@@ -151,6 +151,8 @@ vpkg_fetch() {
     fi
   done
   
+  echo "hey: $have_source"
+  
   # if we don't have the source, $name needs to be 
   # registered, or a valid git/zip/tar/recipe url
   if [ "$have_source" = false ]; then

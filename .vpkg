@@ -23,7 +23,7 @@ pre_build() {
   git reset --hard "$version"
   
   # inform vpkg that we handled the build ourselves
-  echo "$lib"/"$build"
+  echo "$lib"/"$build" > "$intercom"
 }
 
 bootstrap() {
