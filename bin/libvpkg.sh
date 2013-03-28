@@ -143,6 +143,7 @@ vpkg_fetch() {
   # have we already got what we need?
   have_source=false
   ls "$VPKG_HOME"/src | while read package; do
+    echo "whoa: $package == $name"
     if [ "$package" = "$name" ]; then
       have_source=true
       if [ "$name" != "$rename" ]; then
