@@ -233,8 +233,9 @@ vpkg_build() {
     mkdir -p "$lib"
     
     _vpkg_hook "pre_build" || return  $?
+    echo "wow: $?"
     
-    build_location="$(< "$intercom")" || return $?
+    build_location="$(< "$intercom")"
     [ -z "$build_location" ] && build_location="$src"
     [ "$build_location" != "$lib"/"$build" ] && {
       cp -R "$build_location" "$lib"/"$build"
