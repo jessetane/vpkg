@@ -56,18 +56,14 @@ _vpkg_hook() {
     [ -z "$1" ] && echo "vpkg: hook not specified" >&2 && return 1
     
     # run in subshell for safety
-    (
-      # try to bail fast if things go south
-      # be warned, set -e comes with caveats...
-      set -e
-      
+    ( 
       # make dir
       mkdir -p "$src"
       cd "$src"
       
       # ensure our hooks are clean
-      eval "${1}() { :; }"
       version() { :; }
+      eval "${1}() { :; }"
       
       # source recipe
       . "$recipe"
@@ -76,6 +72,9 @@ _vpkg_hook() {
       if [ "$version" = "default" ]; then
         temp="$(version)" && version="$temp"
       fi
+    
+      # try to bail fast if things go south - be warned though, set -e comes with caveats...
+      set -e
     
       # run hook
       "$1"
@@ -115,7 +114,7 @@ _vpkg_source_install() {
       name=""
       default="$download"
       while [ -z "$name" ]; do
-        read -a name -p "$url: name this package [$default]: "
+        read -a name -p "> save source package as [$default]: "
         [ -z "$name" ] && name="$default"
         if _vpkg_source_exists; then
           default="${download}_$((n++))"
@@ -151,6 +150,88 @@ vpkg_version() {
 
 vpkg_usage() {
   echo "usage: vpkg <command> [options] <package> [build] [version]"
+}
+
+vpkg_update() {
+  args=("$@")
+  argue || return 1
+  package="${args[0]}"
+  registries="$VPKG_REGISTRIES"
+  i=0
+  
+  # sanity
+  [ -z "$registries" ] && echo "VPKG_REGISTRIES is not defined" >&2 && return 1
+  
+  # make sure self/etc and our tmp download dir exist
+  mkdir -p "$registry_cache"/tmp
+  
+  # loop over registry urls
+  while read registry
+  do
+    
+    # download your registries and cache them in self/etc/registries
+    # ensure ordering is respected by renaming the files
+    curl -fL# "$registry" -o "$registry_cache"/tmp/"$((i++)).registry"
+    
+    # don't continue if there was an error
+    if [ $? != 0 ]
+    then
+      error=true
+      break
+    fi
+  
+  done < <(echo "$registries")
+  
+  # if there were no errors, blow away old
+  # registries and copy over the new ones
+  if [ "$error" != true ]
+  then
+    rm -f "$registry_cache"/*.registry
+    cp "$registry_cache"/tmp/* "$registry_cache"/
+  fi
+  
+  # blow away our download dir
+  rm -rf "$registry_cache"/tmp
+}
+
+vpkg_lookup() {
+  return 1
+  
+  args=("$@")
+  argue || return 1
+  
+  _vpkg_init_common || return 1
+  
+  # update registries if the cache is empty
+  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
+  then
+    vpkg update &> /dev/null || {
+      echo 'warning: no registries found. try running `vpkg update`' >&2
+      return 1
+    }
+  fi
+  
+  # attempt to lookup a url for $name from your registries
+  while read registry
+  do
+  
+    # in a subshell, source the registry and do a lookup
+    recipe_url="$(
+      unset "$name";
+      source "$registry_cache/$registry";
+      [ -n "${!name}" ] && echo "${!name}"
+    )"
+    
+    # if we found a url, break out of the loop
+    [ -n "$recipe_url" ] && break
+  
+  done < <(ls -A "$registry_cache")
+  
+  # if we didn't get a url, that's an error
+  [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
+  
+  # print url to stdout
+  echo "$recipe_url"
 }
 
 vpkg_fetch() {
@@ -232,51 +313,6 @@ vpkg_fetch() {
   return 0
 }
 
-# vpkg install [<options>] <package|url> [<build>] [<version>]
-vpkg_install() {
-  args=("$@")
-  argue "-n, --name, +"\
-        "-r, --rebuild" || return 1
-  
-  _vpkg_init_common || return 1
-  
-  # build
-  vpkg build "$@"; [ $? = 0 ] || return 1
-  
-  # $name may have changed
-  _vpkg_import_name
-  
-  # link
-  vpkg link "${args[@]}"; [ $? = 0 ] || return 1
-  
-  # update PATH
-  echo "$PATH" > "$intercom"
-  return 78
-}
-
-# vpkg uninstall [<options>] <package> [<build>]
-vpkg_uninstall() {
-  args=("$@")
-  argue "-d, --destroy" || return 1
-  destroy="${opts[0]}"
-  
-  _vpkg_init_common || return 1
-  _vpkg_init_defaults
-  
-  # main
-  vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
-  vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
-  
-  # --destroy?
-  if [ -n "$destroy" ]; then
-    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
-  fi
-  
-  # update PATH
-  echo "$PATH" > "$intercom"
-  return 78
-}
-
 # vpkg build [<options>] <package|url> [<build>] [<version>]
 vpkg_build() {
   args=("$@")
@@ -294,7 +330,7 @@ vpkg_build() {
   # get source or recipe
   vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
   
-  # $name may have changed
+  # name may have changed
   _vpkg_import_name
   
   # destroy if --rebuild
@@ -439,6 +475,51 @@ vpkg_unlink() {
   return 78
 }
 
+# vpkg install [<options>] <package|url> [<build>] [<version>]
+vpkg_install() {
+  args=("$@")
+  argue "-n, --name, +"\
+        "-r, --rebuild" || return 1
+  
+  _vpkg_init_common || return 1
+  
+  # build
+  vpkg build "$@"; [ $? = 0 ] || return 1
+  
+  # name may have changed
+  _vpkg_import_name
+  
+  # link
+  vpkg link "${args[@]}"; [ $? = 0 ] || return 1
+  
+  # update PATH
+  echo "$PATH" > "$intercom"
+  return 78
+}
+
+# vpkg uninstall [<options>] <package> [<build>]
+vpkg_uninstall() {
+  args=("$@")
+  argue "-d, --destroy" || return 1
+  destroy="${opts[0]}"
+  
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
+  
+  # main
+  vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  
+  # --destroy?
+  if [ -n "$destroy" ]; then
+    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
+  fi
+  
+  # update PATH
+  echo "$PATH" > "$intercom"
+  return 78
+}
+
 # vpkg load [options] <package|url> [<build>] [<version>]
 vpkg_load() {
   args=("$@")
@@ -499,86 +580,4 @@ vpkg_unload() {
   # update PATH
   echo "$PATH" > "$intercom"
   return 78
-}
-
-vpkg_update() {
-  args=("$@")
-  argue || return 1
-  package="${args[0]}"
-  registries="$VPKG_REGISTRIES"
-  i=0
-  
-  # sanity
-  [ -z "$registries" ] && echo "VPKG_REGISTRIES is not defined" >&2 && return 1
-  
-  # make sure self/etc and our tmp download dir exist
-  mkdir -p "$registry_cache"/tmp
-  
-  # loop over registry urls
-  while read registry
-  do
-    
-    # download your registries and cache them in self/etc/registries
-    # ensure ordering is respected by renaming the files
-    curl -fL# "$registry" -o "$registry_cache"/tmp/"$((i++)).registry"
-    
-    # don't continue if there was an error
-    if [ $? != 0 ]
-    then
-      error=true
-      break
-    fi
-  
-  done < <(echo "$registries")
-  
-  # if there were no errors, blow away old
-  # registries and copy over the new ones
-  if [ "$error" != true ]
-  then
-    rm -f "$registry_cache"/*.registry
-    cp "$registry_cache"/tmp/* "$registry_cache"/
-  fi
-  
-  # blow away our download dir
-  rm -rf "$registry_cache"/tmp
-}
-
-vpkg_lookup() {
-  return 1
-  
-  args=("$@")
-  argue || return 1
-  
-  _vpkg_init_common || return 1
-  
-  # update registries if the cache is empty
-  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
-  then
-    vpkg update &> /dev/null || {
-      echo 'warning: no registries found. try running `vpkg update`' >&2
-      return 1
-    }
-  fi
-  
-  # attempt to lookup a url for $name from your registries
-  while read registry
-  do
-  
-    # in a subshell, source the registry and do a lookup
-    recipe_url="$(
-      unset "$name";
-      source "$registry_cache/$registry";
-      [ -n "${!name}" ] && echo "${!name}"
-    )"
-    
-    # if we found a url, break out of the loop
-    [ -n "$recipe_url" ] && break
-  
-  done < <(ls -A "$registry_cache")
-  
-  # if we didn't get a url, that's an error
-  [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
-  
-  # print url to stdout
-  echo "$recipe_url"
 }
