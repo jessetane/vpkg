@@ -350,7 +350,7 @@ vpkg_unlink() {
   if [ -z "$old_link" ] || [[ -n "$build" && "$old_link" != "$lib"/"$build" ]]; then
     _vpkg_init_defaults
     echo "$name/$build: not linked" >&2
-    return 1
+    return 0
   fi
   
   # event

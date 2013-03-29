@@ -69,7 +69,7 @@ vpkg install <package> [<build>] [<version>]
 vpkg install <url> [<package>] [<build>] [<version>]
 
 
-
+vpkg install <pacakge|archive-url|recipe-url> <build> <version>
 
 
 # ..
