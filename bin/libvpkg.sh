@@ -114,7 +114,7 @@ _vpkg_source_install() {
       name=""
       default="$download"
       while [ -z "$name" ]; do
-        read -a name -p "> save source as [$default]: "
+        read -a name -p "> save as [$default]: "
         [ -z "$name" ] && name="$default"
         if _vpkg_source_exists; then
           default="${download}_$((n++))"
