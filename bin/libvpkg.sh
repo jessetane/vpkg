@@ -87,62 +87,7 @@ _vpkg_hook() {
   return "$status"
 }
 
-
-# public methods
-
-vpkg_version() {
-  echo "0.0.1"
-}
-
-vpkg_usage() {
-  echo "usage: vpkg <command> [options] <package> [build] [version]"
-}
-
-# vpkg install [<options>] <package|url> [<build>] [<version>]
-vpkg_install() {
-  args=("$@")
-  argue "-n, --name, +"\
-        "-r, --rebuild" || return 1
-  
-  _vpkg_init_common || return 1
-  
-  # main
-  vpkg build "$@"; [ $? = 0 ] || return 1
-  vpkg link "${args[@]}"; [ $? = 0 ] || return 1
-  
-  # update PATH
-  echo "$PATH" > "$intercom"
-  return 78
-}
-
-# vpkg uninstall [<options>] <package> [<build>]
-vpkg_uninstall() {
-  args=("$@")
-  argue "-d, --destroy" || return 1
-  destroy="${opts[0]}"
-  
-  _vpkg_init_common || return 1
-  _vpkg_init_defaults
-  
-  # main
-  vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
-  vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
-  
-  # --destroy?
-  if [ -n "$destroy" ]; then
-    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
-  fi
-  
-  # update PATH
-  echo "$PATH" > "$intercom"
-  return 78
-}
-
-vpkg_fetch() {
-  args=("$@")
-  argue "-n, --name, +" || return 1
-  url="${args[0]}"
-  name="${opts[0]}"
+_vpkg_fetch() {
   [ -z "$name" ] && name="$url"
   
   # do we already have source code?
@@ -224,15 +169,72 @@ vpkg_fetch() {
     echo "fetch: unknown filetype: $filetype" >&2
     rm -rf "$tmp" && return 1
   fi
-
-  # send the name through the intercom
-  echo "$name" > "$intercom"
   
   # remove tmp download dir
   rm -rf "$tmp"
 
   # if we got here, it worked
   return 0
+}
+
+# public methods
+
+vpkg_version() {
+  echo "0.0.1"
+}
+
+vpkg_usage() {
+  echo "usage: vpkg <command> [options] <package> [build] [version]"
+}
+
+# vpkg install [<options>] <package|url> [<build>] [<version>]
+vpkg_install() {
+  args=("$@")
+  argue "-n, --name, +"\
+        "-r, --rebuild" || return 1
+  
+  _vpkg_init_common || return 1
+  
+  # main
+  vpkg build "$@"; [ $? = 0 ] || return 1
+  vpkg link "${args[@]}"; [ $? = 0 ] || return 1
+  
+  # update PATH
+  echo "$PATH" > "$intercom"
+  return 78
+}
+
+# vpkg uninstall [<options>] <package> [<build>]
+vpkg_uninstall() {
+  args=("$@")
+  argue "-d, --destroy" || return 1
+  destroy="${opts[0]}"
+  
+  _vpkg_init_common || return 1
+  _vpkg_init_defaults
+  
+  # main
+  vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  
+  # --destroy?
+  if [ -n "$destroy" ]; then
+    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
+  fi
+  
+  # update PATH
+  echo "$PATH" > "$intercom"
+  return 78
+}
+
+vpkg_fetch() {
+  args=("$@")
+  argue "-n, --name, +" || return 1
+  url="${args[0]}"
+  name="${opts[0]}"
+  
+  # this function is used internally by build()
+  _vpkg_fetch
 }
 
 # vpkg build [<options>] <package|url> [<build>] [<version>]
@@ -247,8 +249,9 @@ vpkg_build() {
   _vpkg_init_defaults
   
   # get source or recipe
-  vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
-  [ -n "$rename" ] && name="$rename" || name="$(< "$intercom")"
+  url="$name"
+  name="$rename"
+  _vpkg_fetch || return 1
   
   # destroy if --rebuild
   if [ -n "$rebuild" ]; then
