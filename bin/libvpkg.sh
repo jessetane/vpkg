@@ -57,16 +57,17 @@ _vpkg_hook() {
     
     # run in subshell for safety
     (
-      # bail fast if things go south
+      # try to bail fast if things go south
+      # be warned, set -e has many caveats...
       set -e
-    
+      
       # make dir
       mkdir -p "$src"
       cd "$src"
       
       # ensure our hooks are clean
-      eval "${1}() { return 127; }"
-      version() { return 127; }
+      eval "${1}() { :; }"
+      version() { :; }
       
       # source recipe
       . "$recipe"
@@ -78,19 +79,16 @@ _vpkg_hook() {
     
       # run hook
       "$1"
-      status="$?"
-      
-      # command not found is OK
-      [ "$status" = 127 ] && status=0
     )
+    status="$?"
   fi
   
-  # return adjusted status
+  # return status
   return "$status"
 }
 
 
-# public methods 
+# public methods
 
 vpkg_version() {
   echo "0.0.1"
@@ -109,8 +107,8 @@ vpkg_install() {
   _vpkg_init_common || return 1
   
   # main
-  vpkg build "$@" || return 1
-  vpkg link "${args[@]}" || return 1
+  vpkg build "$@"; [ $? = 0 ] || return 1
+  vpkg link "${args[@]}"; [ $? = 0 ] || return 1
   
   # update PATH
   echo "$PATH" > "$intercom"
@@ -127,9 +125,13 @@ vpkg_uninstall() {
   _vpkg_init_defaults
   
   # main
-  vpkg unload "${args[@]}" &> /dev/null
-  vpkg unlink "${args[@]}" &> /dev/null
-  [ -n "$destroy" ] && vpkg destroy "${args[@]}" #&> /dev/null
+  vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
+  
+  # --destroy?
+  if [ -n "$destroy" ]; then
+    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
+  fi
   
   # update PATH
   echo "$PATH" > "$intercom"
@@ -226,21 +228,23 @@ vpkg_build() {
   _vpkg_init_defaults
   
   # get source or recipe
-  vpkg fetch "$name" --url "$url" || return 1
+  vpkg fetch "$name" --url "$url"; [ $? = 0 ] || return 1
   
   # destroy if --rebuild
-  [ -n "$rebuild" ] && vpkg destroy "$name" "$build"
+  if [ -n "$rebuild" ]; then
+    vpkg destroy "$name" "$build"; [ $? = 0 ] || return 1
+  fi
   
   # only build if we have to
   if [ ! -e "$lib"/"$build" ]; then
     mkdir -p "$lib"
     
-    build_location="$(_vpkg_hook "pre_build")" || return  $?
+    build_location="$(_vpkg_hook "pre_build")"; [ $? = 0 ] || return 1
     [ -z "$build_location" ] && build_location="$src"
     [ "$build_location" != "$lib"/"$build" ] && {
       cp -R "$build_location" "$lib"/"$build"
     }
-    _vpkg_hook "post_build" || return $?
+    _vpkg_hook "post_build"; [ $? = 0 ] || return 1
   fi
   
   # if we get here it worked
@@ -256,14 +260,14 @@ vpkg_destroy() {
   _vpkg_init_defaults
   
   # 
-  vpkg unload "$@" &> /dev/null
-  vpkg unlink "$@" &> /dev/null
+  vpkg unload "$@" &> /dev/null; [ $? = 0 ] || return 1
+  vpkg unlink "$@" &> /dev/null; [ $? = 0 ] || return 1
   
   if [ -e "$lib"/"$build" ]; then
-    _vpkg_hook "pre_destroy" || return $?
+    _vpkg_hook "pre_destroy"; [ $? = 0 ] || return 1
     rm -rf "$lib"/"$build"
     [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
-    _vpkg_hook "post_destroy" || return $?
+    _vpkg_hook "post_destroy"; [ $? = 0 ] || return 1
   else
     echo "$name/$build: not built" >&2
   fi
@@ -299,10 +303,10 @@ vpkg_link() {
   [ ! -e "$lib"/"$build" ] && echo "$name/$build: has not been built" >&2 && return 1
   
   # unlink any others and build if necessary
-  vpkg unlink "$name" &> /dev/null
+  vpkg unlink "$name" &> /dev/null; [ $? = 0 ] || return 1
   
   # event
-  _vpkg_hook "pre_link" || return $?
+  _vpkg_hook "pre_link"; [ $? = 0 ] || return 1
   
   # create link
   ln -sf "$lib"/"$build" "$lib"/"$link_name"
@@ -325,7 +329,7 @@ vpkg_link() {
   done
 
   # event
-  _vpkg_hook "post_link" || return $?
+  _vpkg_hook "post_link"; [ $? = 0 ] || return 1
   
   # update PATH
   echo "$PATH" > "$intercom"
@@ -350,7 +354,7 @@ vpkg_unlink() {
   fi
   
   # event
-  _vpkg_hook "pre_unlink" || return $?
+  _vpkg_hook "pre_unlink"; [ $? = 0 ] || return 1
   
   # remove link
   rm "$lib"/"$link_name"
@@ -361,7 +365,7 @@ vpkg_unlink() {
   done
   
   # event
-  _vpkg_hook "post_unlink" || return $?
+  _vpkg_hook "post_unlink"; [ $? = 0 ] || return 1
   
   # update PATH
   echo "$PATH" > "$intercom"
@@ -385,16 +389,16 @@ vpkg_load() {
   # defaults
   _vpkg_init_defaults
   
-  vpkg unload "$name" &> /dev/null
-  vpkg build "$@"
+  vpkg unload "$name" &> /dev/null; [ $? = 0 ] || return 1
+  vpkg build "$@"; [ $? = 0 ] || return 1
   
-  _vpkg_hook "pre_load" || return $?
+  _vpkg_hook "pre_load"; [ $? = 0 ] || return 1
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH" 
   PATH="$lib"/"$build"/bin"$PATH"
   
-  _vpkg_hook "post_load" || return $?
+  _vpkg_hook "post_load"; [ $? = 0 ] || return 1
   
   # update PATH
   echo "$PATH" > "$intercom"
@@ -417,13 +421,13 @@ vpkg_unload() {
     return 1
   fi
   
-  _vpkg_hook "pre_unload" || return $?
+  _vpkg_hook "pre_unload"; [ $? = 0 ] || return 1
   
   # edit PATH
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
   
-  _vpkg_hook "post_unload" || return $?
+  _vpkg_hook "post_unload"; [ $? = 0 ] || return 1
   
   # update PATH
   echo "$PATH" > "$intercom"
