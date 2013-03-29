@@ -180,6 +180,7 @@ vpkg_fetch() {
   }
   
   # try to download file
+  echo "downloading $url..."
   curl -fLO# "$url" || {
     rm -rf "$tmp" && return 1
   }
@@ -205,7 +206,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    [ "$name" = "$url" ] && name="$download" && read -a name -p "$url: name this pacakge [$name]: "
+    [ "$name" = "$url" ] && read -a name -p "$name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
     mv "$download" "$VPKG_HOME"/src/"$name"
 
   # zip archive?
@@ -215,7 +216,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    [ "$name" = "$url" ] && name="$download" && read -a name -p "$url: name this pacakge [$name]: "
+    [ "$name" = "$url" ] && read -a name -p "$name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
     mv "$download" "$VPKG_HOME"/src/"$name"
   
   # unknown
