@@ -1,3 +1,4 @@
+
 #
 # vpkg.sh
 #
@@ -15,6 +16,9 @@ vpkg() {
   local intercom="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
     echo "could not create intercom" >&2 && return 1
   }
+  
+  # if we are master, export a ref to a master intercom - this will be unset later
+  [ "$(sh -c 'echo "$PPID"')" = "$$" ] && export VPKG_MASTER_INTERCOM="$intercom"
   
   # execute main in a subshell for environmental safety
   (
@@ -72,9 +76,12 @@ vpkg() {
     status=0
   fi
 
+  # unexport the master intercom ref if we are master
+  [ "$(sh -c 'echo "$PPID"')" = "$$" ] && unset VPKG_MASTER_INTERCOM
+
   # cleanup
   rm "$intercom"
-
+  
   # report proper status
   return "$status"
 }

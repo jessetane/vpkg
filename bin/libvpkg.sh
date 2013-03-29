@@ -87,95 +87,61 @@ _vpkg_hook() {
   return "$status"
 }
 
-_vpkg_fetch() {
-  [ -z "$name" ] && name="$url"
-  
-  # do we already have source code?
-  while read package; do
-    if [ "$package" = "$url" ]; then
-      if [ "$name" != "$url" ]; then
-        [ -e "$name" ] && echo "fetch: $name: source exists" >&2 && return 1
-        cp -R "$VPKG_HOME"/src/"$url" "$VPKG_HOME"/src/"$name"
-      fi
-      return 0
-    fi
-  done < <(ls -A "$VPKG_HOME"/src)
-  
-  # we don't have source code yet so try to 
-  # lookup the package from the registries
-  lookup="$(vpkg lookup "$url")" && url="$lookup"
-  
-  # # is it git?
-  # git ls-remote "$url" &> /dev/null && {
-  #   git clone "$url" "$src"
-  #   return 0
-  # }
-  
-  # create a temp folder to download to
-  tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
-    echo "fetch: could not create temporary directory" >&2 && return 1
-  }
-  cd "$tmp"
-  
-  # valid url?
-  curl -I "$url" &> /dev/null || {
-    echo "$url: package not registered and does not appear to be valid URL" >&2
-    rm -rf "$tmp"
-    return 1
-  }
-  
-  # try to download file
-  echo "downloading $url..."
-  curl -fLO# "$url" || {
-    rm -rf "$tmp" && return 1
-  }
-  
-  # what'd we get?
+_vpkg_import_name() {
+  name="$(cat "$VPKG_MASTER_INTERCOM")"
+  args[0]="$name"
+  _vpkg_init_common
+  _vpkg_init_defaults
+}
+
+_vpkg_export_name() {
+  echo "$name" > "$VPKG_MASTER_INTERCOM"
+}
+
+_vpkg_source_exists() {
+  [ -e "$VPKG_HOME"/src/"$name" ] && echo "$name: source exists" >&2 && return 0
+}
+
+_vpkg_source_install() {
+  rm "$download"
   download="$(ls -A)"
-  filetype="$(file "$download" | sed "s/.*: //")"
-
-  # recipe (shell script)?
-  if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
-    mkdir -p "$recipe_cache"
-    [ "$name" = "$url" ] && name="$(_vpkg_hook "name")"
-    [ -z "$name" ] || {
-      echo "$url: recipe did not provide a name, pass one manually with --name <package-name>" >&2
-      rm -rf "$tmp" && return 1
-    }
-    cp "$download" "$recipe_cache"/"$name"
   
-  # tarball?
-  elif echo "$filetype" | grep -q "gzip compressed"; then
-    tar -xvzf "$download" || {
-      rm -rf "$tmp" && return 1
-    }
-    rm "$download"
-    download="$(ls -A)"
-    [ "$name" = "$url" ] && read -a name -p "name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
-    mv "$download" "$VPKG_HOME"/src/"$name"
-
-  # zip archive?
-  elif echo "$filetype" | grep -q "Zip archive"; then
-    unzip "$download" || {
-      rm -rf "$tmp" && return 1
-    }
-    rm "$download"
-    download="$(ls -A)"
-    [ "$name" = "$url" ] && read -a name -p "name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
-    mv "$download" "$VPKG_HOME"/src/"$name"
-  
-  # unknown
-  else
-    echo "fetch: unknown filetype: $filetype" >&2
-    rm -rf "$tmp" && return 1
+  # we need a name to install the source as
+  if [ "$name" = "$url" ]; then
+    
+    # if we are connected to a terminal we can ask for it
+    if [ -t 1 ]; then
+      n=0
+      name=""
+      default="$download"
+      while [ -z "$name" ]; do
+        read -a name -p "$url: name this package [$default]: "
+        [ -z "$name" ] && name="$default"
+        if _vpkg_source_exists; then
+          default="${download}_$((n++))"
+          name=""
+        fi
+      done
+    
+    # if we don't have a terminal, just try the default
+    else
+      name="$download"
+    fi
   fi
   
-  # remove tmp download dir
-  rm -rf "$tmp"
+  # bail if existing
+  _vpkg_source_exists && return 1
+  
+  # install the source
+  mv "$download" "$VPKG_HOME"/src/"$name"
+}
 
-  # if we got here, it worked
+_vpkg_fail() {
+  [ -n "$1" ] && echo "$1" >&2
+  rm -rf "$tmp"
   return 0
 }
+
 
 # public methods
 
@@ -187,6 +153,85 @@ vpkg_usage() {
   echo "usage: vpkg <command> [options] <package> [build] [version]"
 }
 
+vpkg_fetch() {
+  args=("$@")
+  argue "-n, --name, +" || return 1
+  url="${args[0]}"
+  name="${opts[0]}"
+  [ -z "$name" ] && name="$url"
+  
+  # do we already have source code?
+  while read package; do
+    if [ "$package" = "$url" ]; then
+      if [ "$name" != "$url" ]; then
+        _vpkg_source_exists && return 1
+        cp -R "$VPKG_HOME"/src/"$url" "$VPKG_HOME"/src/"$name"
+      fi
+      _vpkg_export_name && return 0
+    fi
+  done < <(ls -A "$VPKG_HOME"/src)
+  
+  # do we have a recipe?
+  [ -e "$recipe_cache"/"$url" ] && name="$url" && _vpkg_export_name && return 0
+  
+  # we don't have a recipe or source code yet so try 
+  # to lookup the package from one of the registries
+  lookup="$(vpkg lookup "$url")" && url="$lookup"
+  
+  # # is it git?
+  # git ls-remote "$url" &> /dev/null && {
+  #   git clone "$url" "$src"
+  #   return 0
+  # }
+  
+  # create a temp folder to download to
+  ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
+  cd "$tmp"
+  
+  # valid url?
+  ! curl -I "$url" &> /dev/null && _vpkg_fail "$url: package not registered and does not appear to be valid URL" && return 1
+  
+  # try to download file
+  echo "downloading $url..."
+  ! curl -fLO# "$url" && _vpkg_fail && return 1
+  
+  # what'd we get?
+  download="$(ls -A)"
+  filetype="$(file "$download" | sed "s/.*: //")"
+
+  # recipe (shell script)?
+  if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
+    mkdir -p "$recipe_cache"
+    [ "$name" = "$url" ] && name="$(_vpkg_hook "name")"
+    [ ! -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name <package-name>" && return 1
+    _vpkg_source_exists && return 1
+    cp "$download" "$recipe_cache"/"$name"
+  
+  # tarball?
+  elif echo "$filetype" | grep -q "gzip compressed"; then
+    ! tar -xvzf "$download" && _vpkg_fail && return 1
+    _vpkg_source_install || return 1
+
+  # zip archive?
+  elif echo "$filetype" | grep -q "Zip archive"; then
+    ! unzip "$download" && _vpkg_fail && return 1
+    _vpkg_source_install || return 1
+  
+  # unknown
+  else
+    _vpkg_fail "fetch: unknown filetype: $filetype" && return 1 
+  fi
+  
+  # tell the master about any name changes
+  _vpkg_export_name
+  
+  # remove tmp download dir
+  rm -rf "$tmp"
+  
+  # if we got here, it worked
+  return 0
+}
+
 # vpkg install [<options>] <package|url> [<build>] [<version>]
 vpkg_install() {
   args=("$@")
@@ -195,8 +240,13 @@ vpkg_install() {
   
   _vpkg_init_common || return 1
   
-  # main
+  # build
   vpkg build "$@"; [ $? = 0 ] || return 1
+  
+  # $name may have changed
+  _vpkg_import_name
+  
+  # link
   vpkg link "${args[@]}"; [ $? = 0 ] || return 1
   
   # update PATH
@@ -227,16 +277,6 @@ vpkg_uninstall() {
   return 78
 }
 
-vpkg_fetch() {
-  args=("$@")
-  argue "-n, --name, +" || return 1
-  url="${args[0]}"
-  name="${opts[0]}"
-  
-  # this function is used internally by build()
-  _vpkg_fetch
-}
-
 # vpkg build [<options>] <package|url> [<build>] [<version>]
 vpkg_build() {
   args=("$@")
@@ -248,10 +288,14 @@ vpkg_build() {
   _vpkg_init_common || return 1
   _vpkg_init_defaults
   
+  # bail if --name and source exists
+  [ -n "$rename" ] && [ -e "$VPKG_HOME"/src/"$rename" ] && echo "$rename: source exists" >&2 && return 1
+  
   # get source or recipe
-  url="$name"
-  name="$rename"
-  _vpkg_fetch || return 1
+  vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
+  
+  # $name may have changed
+  _vpkg_import_name
   
   # destroy if --rebuild
   if [ -n "$rebuild" ]; then
