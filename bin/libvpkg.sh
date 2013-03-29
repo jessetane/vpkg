@@ -500,8 +500,10 @@ vpkg_install() {
 # vpkg uninstall [<options>] <package> [<build>]
 vpkg_uninstall() {
   args=("$@")
-  argue "-d, --destroy" || return 1
+  argue "-d, --destroy"\
+        "-p, --purge" || return 1
   destroy="${opts[0]}"
+  purge="${opts[1]}"
   
   _vpkg_init_common || return 1
   _vpkg_init_defaults
@@ -510,8 +512,13 @@ vpkg_uninstall() {
   vpkg unload "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
   vpkg unlink "${args[@]}" &> /dev/null; [ $? = 0 ] || return 1
   
-  # --destroy?
-  if [ -n "$destroy" ]; then
+  # --purge? --destroy?
+  if [ -n "$purge" ]; then
+    vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
+    rm -rf "$VPKG_HOME"/etc/"$name"
+    rm -rf "$VPKG_HOME"/src/"$name"
+    rm -rf "$VPKG_HOME"/tmp/"$name"
+  elif [ -n "$destroy" ]; then
     vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
   fi
   
