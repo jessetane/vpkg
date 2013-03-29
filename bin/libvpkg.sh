@@ -206,7 +206,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    [ "$name" = "$url" ] && read -a name -p "$name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
+    [ "$name" = "$url" ] && read -a name -p "name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
     mv "$download" "$VPKG_HOME"/src/"$name"
 
   # zip archive?
@@ -216,7 +216,7 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    [ "$name" = "$url" ] && read -a name -p "$name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
+    [ "$name" = "$url" ] && read -a name -p "name this pacakge [$download]: " && [ -z "$name" ] && name="$download"
     mv "$download" "$VPKG_HOME"/src/"$name"
   
   # unknown
@@ -225,6 +225,9 @@ vpkg_fetch() {
     rm -rf "$tmp" && return 1
   fi
 
+  # send the name through the intercom
+  echo "$name" > "$intercom"
+  
   # remove tmp download dir
   rm -rf "$tmp"
 
@@ -245,7 +248,7 @@ vpkg_build() {
   
   # get source or recipe
   vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
-  [ -n "$rename" ] && name="$rename"
+  [ -n "$rename" ] && name="$rename" || name="$(< "$intercom")"
   
   # destroy if --rebuild
   if [ -n "$rebuild" ]; then
