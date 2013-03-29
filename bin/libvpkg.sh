@@ -58,7 +58,7 @@ _vpkg_hook() {
     # run in subshell for safety
     (
       # try to bail fast if things go south
-      # be warned, set -e has many caveats...
+      # be warned, set -e comes with caveats...
       set -e
       
       # make dir
@@ -101,7 +101,7 @@ vpkg_usage() {
 # vpkg install [<options>] <package|url> [<build>] [<version>]
 vpkg_install() {
   args=("$@")
-  argue "-u, --url, +"\
+  argue "-n, --name, +"\
         "-r, --rebuild" || return 1
   
   _vpkg_init_common || return 1
@@ -140,38 +140,46 @@ vpkg_uninstall() {
 
 vpkg_fetch() {
   args=("$@")
-  argue "-u, --url, +" || return 1
-  url="${opts[0]}"
-  name="${args[0]}"
-  src="$VPKG_HOME"/src/"$name"
+  argue "-n, --name, +" || return 1
+  url="${args[0]}"
+  name="${opts[0]}"
+  [ -z "$name" ] && name="$url"
   
   # do we already have source code?
   while read package; do
-    if [ "$package" = "$name" ]; then
-      [ -n "$url" ] && echo "$name: source code exists, ignoring --url option" >&2
+    if [ "$package" = "$url" ]; then
+      if [ "$name" != "$url" ]; then
+        [ -e "$name" ] && echo "fetch: $name: source exists" >&2 && return 1
+        cp -R "$VPKG_HOME"/src/"$url" "$VPKG_HOME"/src/"$name"
+      fi
       return 0
     fi
   done < <(ls -A "$VPKG_HOME"/src)
   
-  # if we don't have a url, try to look one up
-  if [ -z "$url" ]; then
-    url="$(vpkg lookup "$name")" || {
-      echo "$name"': package not registered, try passing a --url' >&2
-      return 1
-    }
-  fi
-    
+  # we don't have source code yet so try to 
+  # lookup the package from the registries
+  lookup="$(vpkg lookup "$url")" && url="$lookup"
+  
   # # is it git?
   # git ls-remote "$url" &> /dev/null && {
   #   git clone "$url" "$src"
   #   return 0
   # }
   
-  # try to download
+  # create a temp folder to download to
   tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
     echo "fetch: could not create temporary directory" >&2 && return 1
   }
   cd "$tmp"
+  
+  # valid url?
+  curl -I "$url" &> /dev/null || {
+    echo "$url: package not registered and does not appear to be valid URL" >&2
+    rm -rf "$tmp"
+    return 1
+  }
+  
+  # try to download file
   curl -fLO# "$url" || {
     rm -rf "$tmp" && return 1
   }
@@ -179,10 +187,15 @@ vpkg_fetch() {
   # what'd we get?
   download="$(ls -A)"
   filetype="$(file "$download" | sed "s/.*: //")"
-  
+
   # recipe (shell script)?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     mkdir -p "$recipe_cache"
+    [ "$name" = "$url" ] && name="$(_vpkg_hook "name")"
+    [ -z "$name" ] || {
+      echo "$url: recipe did not provide a name, pass one manually with --name <package-name>" >&2
+      rm -rf "$tmp" && return 1
+    }
     cp "$download" "$recipe_cache"/"$name"
   
   # tarball?
@@ -192,8 +205,9 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    mv "$download" "$src"
-  
+    [ "$name" = "$url" ] && name="$download" && read -a name -p "$url: name this pacakge [$name]: "
+    mv "$download" "$VPKG_HOME"/src/"$name"
+
   # zip archive?
   elif echo "$filetype" | grep -q "Zip archive"; then
     unzip "$download" || {
@@ -201,17 +215,18 @@ vpkg_fetch() {
     }
     rm "$download"
     download="$(ls -A)"
-    mv "$download" "$src"
-    
+    [ "$name" = "$url" ] && name="$download" && read -a name -p "$url: name this pacakge [$name]: "
+    mv "$download" "$VPKG_HOME"/src/"$name"
+  
   # unknown
   else
     echo "fetch: unknown filetype: $filetype" >&2
     rm -rf "$tmp" && return 1
   fi
-  
+
   # remove tmp download dir
   rm -rf "$tmp"
-  
+
   # if we got here, it worked
   return 0
 }
@@ -219,16 +234,17 @@ vpkg_fetch() {
 # vpkg build [<options>] <package|url> [<build>] [<version>]
 vpkg_build() {
   args=("$@")
-  argue "-u, --url, +"\
+  argue "-n, --name, +"\
         "-r, --rebuild" || return 1
-  url="${opts[0]}"
+  rename="${opts[0]}"
   rebuild="${opts[1]}"
   
   _vpkg_init_common || return 1
   _vpkg_init_defaults
   
   # get source or recipe
-  vpkg fetch "$name" --url "$url"; [ $? = 0 ] || return 1
+  vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
+  [ -n "$rename" ] && name="$rename"
   
   # destroy if --rebuild
   if [ -n "$rebuild" ]; then
@@ -375,7 +391,7 @@ vpkg_unlink() {
 # vpkg load [options] <package|url> [<build>] [<version>]
 vpkg_load() {
   args=("$@")
-  argue "-u, --url, +" || return 1
+  argue "-n, --name, +" || return 1
   
   _vpkg_init_common || return 1
     
