@@ -44,16 +44,16 @@ _vpkg_init_defaults() {
 }
 
 _vpkg_hook() {
-  local recipe="$recipe_cache"/"$name"
+  local opts=()
+  local args=("$@")
+  argue "-r, --recipe, +"
+  local hook="${args[0]}"
+  local recipe="$recipe_cache"/"$name" && [ -n "${opts[0]}" ] && recipe="${opts[0]}"
   local status=0
-  
-  # clear intercom
-  echo "" > "$intercom"
-  
   if [ -e "$recipe" ]; then
   
     # make sure $1 is safe for eval
-    [ -z "$1" ] && echo "vpkg: hook not specified" >&2 && return 1
+    [ -z "$hook" ] && echo "vpkg: hook not specified" >&2 && return 1
     
     # run in subshell for safety
     ( 
@@ -63,21 +63,22 @@ _vpkg_hook() {
       
       # ensure our hooks are clean
       version() { :; }
-      eval "${1}() { :; }"
+      eval "${hook}() { :; }"
       
       # source recipe
       . "$recipe"
-    
+      
       # if version = default, see if the recipe provides a default
       if [ "$version" = "default" ]; then
         temp="$(version)" && version="$temp"
       fi
     
-      # try to bail fast if things go south - be warned though, set -e comes with caveats...
+      # try to bail fast if things go south
+      # beware set -e: there be dragons
       set -e
-    
+      
       # run hook
-      "$1"
+      "$hook"
     )
     status="$?"
   fi
@@ -277,15 +278,15 @@ vpkg_fetch() {
   ! curl -fLO# "$url" && _vpkg_fail && return 1
   
   # what'd we get?
-  download="$(ls -A)"
+  download="$(pwd)/$(ls -A)"
   filetype="$(file "$download" | sed "s/.*: //")"
 
-  # recipe (shell script)?
+  # shell script?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     mkdir -p "$recipe_cache"
-    [ "$name" = "$url" ] && name="$(_vpkg_hook "name")"
-    [ ! -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name <package-name>" && return 1
-    _vpkg_source_exists && return 1
+    [ "$name" = "$url" ] && name="$(_vpkg_hook "name" --recipe "$download")"
+    [ -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name" && return 1
+    rm -f "$recipe_cache"/"$name"
     cp "$download" "$recipe_cache"/"$name"
   
   # tarball?
@@ -333,7 +334,7 @@ vpkg_build() {
   # name may have changed
   _vpkg_import_name
   
-  # destroy if --rebuild
+  # destroy first if --rebuild
   if [ -n "$rebuild" ]; then
     vpkg destroy "$name" "$build"; [ $? = 0 ] || return 1
   fi
@@ -341,7 +342,6 @@ vpkg_build() {
   # only build if we have to
   if [ ! -e "$lib"/"$build" ]; then
     mkdir -p "$lib"
-    
     build_location="$(_vpkg_hook "pre_build")"; [ $? = 0 ] || return 1
     [ -z "$build_location" ] && build_location="$src"
     [ "$build_location" != "$lib"/"$build" ] && {
@@ -399,7 +399,7 @@ vpkg_link() {
     fi
   fi
   
-  # def
+  # defaults
   _vpkg_init_defaults
   
   # bail if not built
@@ -518,6 +518,7 @@ vpkg_uninstall() {
     rm -rf "$VPKG_HOME"/etc/"$name"
     rm -rf "$VPKG_HOME"/src/"$name"
     rm -rf "$VPKG_HOME"/tmp/"$name"
+    rm -rf "$recipe_cache"/"$name"
   elif [ -n "$destroy" ]; then
     vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
   fi

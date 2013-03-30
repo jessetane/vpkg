@@ -3,45 +3,51 @@
 # .vpkg hooks for node
 #
 
+name() {
+  echo "node"
+}
+
 version() {
   echo "0.8.20"
 }
 
 pre_build() {
-  
-  # vars
-  os=$(uname | awk '{ print(tolower($1)) }')
-  arch=$(uname -p) && arch="${arch: -2}"
-  fname="node-v${version}-${os}-x${arch}.tar.gz"
-  archive="$src"/cache/"$fname"
-  url="http://nodejs.org/dist/v$version/$fname"
-  
-  if [ ! -e "$src"/build/"$build" ]; then
-
-    # download an archive of the requested
-    # version if we don't already have it
-    if [ ! -e "$archive" ]; then
+  {
     
-      # ensure dirs exists
-      mkdir -p "$src"/cache
+    # vars
+    os=$(uname | awk '{ print(tolower($1)) }')
+    arch=$(uname -p) && arch="${arch: -2}"
+    fname="node-v${version}-${os}-x${arch}.tar.gz"
+    archive="$src"/cache/"$fname"
+    url="http://nodejs.org/dist/v$version/$fname"
+    
+    if [ ! -e "$src"/build/"$build" ]; then
       
-      # dl
-      echo "downloading $url..."
-      ! curl -fL# "$url" -o "$archive" && echo "$version: version could not be downloaded" >&2 && return 1
+      # download an archive of the requested
+      # version if we don't already have it
+      if [ ! -e "$archive" ]; then
+      
+        # ensure dirs exists
+        mkdir -p "$src"/cache
+        
+        # dl
+        echo "downloading $url..."
+        ! curl -fL# "$url" -o "$archive" && echo "$version: version could not be downloaded" >&2 && return 1
+      fi
+      
+      # untar
+      mkdir -p "$src"/tmp
+      tar -xvzf "$archive" -C "$src"/tmp &> /dev/null
+      
+      # rename to $build - HACK: some versions untar
+      # to non matching names, but globbing works since
+      # they all seem to at least start with "node"
+      mv "$src"/tmp/node* "$lib"/"$build"
+      
+      rm -rf "$src"/tmp
     fi
-    
-    # untar
-    mkdir -p "$src"/tmp
-    tar -xvzf "$archive" -C "$src"/tmp &> /dev/null
-    
-    # rename to $build - HACK: some versions untar
-    # to non matching names, but globbing works since
-    # they all seem to at least start with "node"
-    mv "$src"/tmp/node* "$lib"/"$build"
-    
-    rm -rf "$src"/tmp
-  fi
-  
+  } >&2
+
   # TODO: ipc to caller informing them
-  echo "$lib"/"$build" > "$intercom"
+  echo "$lib"/"$build"
 }

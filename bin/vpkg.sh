@@ -1,4 +1,3 @@
-
 #
 # vpkg.sh
 #
@@ -12,12 +11,12 @@ vpkg() {
   mkdir -p "$VPKG_HOME"/tmp
   
   # make a temporary file in case we need
-  # to communicate with the subprocess
+  # to communicate with subprocesses
   local intercom="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" || {
     echo "could not create intercom" >&2 && return 1
   }
   
-  # if we are master, export a ref to a master intercom - this will be unset later
+  # if we are master, export a ref to a master intercom
   [ "$(sh -c 'echo "$PPID"')" = "$$" ] && export VPKG_MASTER_INTERCOM="$intercom"
   
   # execute main in a subshell for environmental safety
