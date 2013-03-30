@@ -10,8 +10,7 @@ _vpkg_init_private() {
   
   # internal vars
   link_name="current"
-  registry_cache="$VPKG_HOME"/etc/vpkg/registries
-  recipe_cache="$VPKG_HOME"/etc/vpkg/recipes
+  registry_cache="$VPKG_HOME"/etc/vpkg
 }
 
 _vpkg_init_common() {
@@ -48,43 +47,40 @@ _vpkg_hook() {
   local args=("$@")
   argue "-r, --recipe, +"
   local hook="${args[0]}"
-  local recipe="$recipe_cache"/"$name" && [ -n "${opts[0]}" ] && recipe="${opts[0]}"
-  local status=0
-  if [ -e "$recipe" ]; then
+  local recipe="$etc"/.vpkg && [ -n "${opts[0]}" ] && recipe="${opts[0]}"
   
-    # make sure $1 is safe for eval
-    [ -z "$hook" ] && echo "vpkg: hook not specified" >&2 && return 1
-    
-    # run in subshell for safety
-    ( 
-      # try to bail fast if things go south
-      # note: beware set -e, there are caveats
-      set -e
-    
-      # make dir
+  # make sure $1 is safe for eval
+  [ -z "$hook" ] && echo "vpkg: hook not specified" >&2 && return 1
+  
+  # run in subshell for safety
+  ( 
+    # try to bail fast if things go south
+    # note: beware set -e, there are caveats
+    set -e
+  
+    # make src dir and go there 
+    # unless using a custom --recipe
+    if [ -z "${opts[0]}" ]; then
       mkdir -p "$src"
       cd "$src"
-      
-      # ensure our hooks are clean
-      eval "${hook}() { :; }"
-      version() { :; }
-      
-      # source recipe
-      . "$recipe"
-      
-      # if version = default, see if the recipe defines one
-      if [ "$version" = "default" ]; then
-        temp="$(version)" && version="$temp"
-      fi
-      
-      # run hook
-      "$hook"
-    )
-    status="$?"
-  fi
-  
-  # return status
-  return "$status"
+    fi
+    
+    # ensure our hooks are clean or have sensible defaults
+    eval "${hook}() { :; }"
+    version() { :; }
+    build() { return 78; }
+    
+    # source recipe if we have one
+    [ -e "$recipe" ] && . "$recipe"
+    
+    # if version = default, see if the recipe defines one
+    if [ "$version" = "default" ]; then
+      temp="$(version)" && version="$temp"
+    fi
+    
+    # run hook
+    "$hook"
+  )
 }
 
 _vpkg_import_name() {
@@ -254,7 +250,7 @@ vpkg_fetch() {
   done < <(ls -A "$VPKG_HOME"/src)
   
   # do we have a recipe?
-  [ -e "$recipe_cache"/"$url" ] && name="$url" && _vpkg_export_name && return 0
+  [ -e "$VPKG_HOME"/etc/"$url"/.vpkg ] && name="$url" && _vpkg_export_name && return 0
   
   # we don't have a recipe or source code yet so try 
   # to lookup the package from one of the registries
@@ -283,11 +279,10 @@ vpkg_fetch() {
 
   # shell script?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
-    mkdir -p "$recipe_cache"
     [ "$name" = "$url" ] && name="$(_vpkg_hook "name" --recipe "$download")"
     [ -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name" && return 1
-    rm -f "$recipe_cache"/"$name"
-    cp "$download" "$recipe_cache"/"$name"
+    rm -f "$VPKG_HOME"/etc/"$name"/.vpkg
+    cp "$download" "$VPKG_HOME"/etc/"$name"/.vpkg
   
   # tarball?
   elif echo "$filetype" | grep -q "gzip compressed"; then
@@ -344,26 +339,18 @@ vpkg_build() {
     mkdir -p "$lib"
     _vpkg_hook "pre_build"; [ $? = 0 ] || return 1
     
-    # default build routine
-    build() {
+    # if the build hook is not defined, hooking it will return 78
+    # indicating that we should try to copy over the files manually
+    _vpkg_hook "build";
+    status="$?"
+    if [ "$status" = 78 ]; then
       cp -R "$src" "$lib"/"$build"
-    }
+    elif [ "$status" != 0 ]; then
+      return 1
+    fi
     
-    _vpkg_hook "build"; [ $? = 0 ] || return 1
     _vpkg_hook "post_build"; [ $? = 0 ] || return 1
   fi
-
-  
-  # # only build if we have to
-  # if [ ! -e "$lib"/"$build" ]; then
-  #   mkdir -p "$lib"
-  #   build_location="$(_vpkg_hook "pre_build")"; [ $? = 0 ] || return 1
-  #   [ -z "$build_location" ] && build_location="$src"
-  #   [ "$build_location" != "$lib"/"$build" ] && {
-  #     cp -R "$build_location" "$lib"/"$build"
-  #   }
-  #   _vpkg_hook "post_build"; [ $? = 0 ] || return 1
-  # fi
   
   # if we get here it worked
   return 0
@@ -533,7 +520,7 @@ vpkg_uninstall() {
     rm -rf "$VPKG_HOME"/etc/"$name"
     rm -rf "$VPKG_HOME"/src/"$name"
     rm -rf "$VPKG_HOME"/tmp/"$name"
-    rm -rf "$recipe_cache"/"$name"
+    rm -rf "$etc"/.vpkg
   elif [ -n "$destroy" ]; then
     vpkg destroy "${args[@]}"; [ $? = 0 ] || return 1
   fi
