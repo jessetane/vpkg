@@ -57,25 +57,25 @@ _vpkg_hook() {
     
     # run in subshell for safety
     ( 
+      # try to bail fast if things go south
+      # note: beware set -e, there are caveats
+      set -e
+    
       # make dir
       mkdir -p "$src"
       cd "$src"
       
       # ensure our hooks are clean
-      version() { :; }
       eval "${hook}() { :; }"
+      version() { :; }
       
       # source recipe
       . "$recipe"
       
-      # if version = default, see if the recipe provides a default
+      # if version = default, see if the recipe defines one
       if [ "$version" = "default" ]; then
         temp="$(version)" && version="$temp"
       fi
-    
-      # try to bail fast if things go south
-      # beware set -e: there be dragons
-      set -e
       
       # run hook
       "$hook"
@@ -338,17 +338,32 @@ vpkg_build() {
   if [ -n "$rebuild" ]; then
     vpkg destroy "$name" "$build"; [ $? = 0 ] || return 1
   fi
-  
+
   # only build if we have to
   if [ ! -e "$lib"/"$build" ]; then
     mkdir -p "$lib"
-    build_location="$(_vpkg_hook "pre_build")"; [ $? = 0 ] || return 1
-    [ -z "$build_location" ] && build_location="$src"
-    [ "$build_location" != "$lib"/"$build" ] && {
-      cp -R "$build_location" "$lib"/"$build"
+    _vpkg_hook "pre_build"; [ $? = 0 ] || return 1
+    
+    # default build routine
+    build() {
+      cp -R "$src" "$lib"/"$build"
     }
+    
+    _vpkg_hook "build"; [ $? = 0 ] || return 1
     _vpkg_hook "post_build"; [ $? = 0 ] || return 1
   fi
+
+  
+  # # only build if we have to
+  # if [ ! -e "$lib"/"$build" ]; then
+  #   mkdir -p "$lib"
+  #   build_location="$(_vpkg_hook "pre_build")"; [ $? = 0 ] || return 1
+  #   [ -z "$build_location" ] && build_location="$src"
+  #   [ "$build_location" != "$lib"/"$build" ] && {
+  #     cp -R "$build_location" "$lib"/"$build"
+  #   }
+  #   _vpkg_hook "post_build"; [ $? = 0 ] || return 1
+  # fi
   
   # if we get here it worked
   return 0
