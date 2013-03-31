@@ -142,6 +142,7 @@ _vpkg_build_dependencies() {
   local dep
   local deps="$(_vpkg_hook "dependencies")"
   for dep in "$deps"; do
+    echo "dep: $dep"
     local dep_name="$(echo "$dep" | sed "s/\(.*\) .*/\1/")"
     local dep_version="$(echo "$dep" | sed "s/.* \(.*\)/\1/")"
     #echo "$name: building dependency: $dep_name/$dep_version..."
