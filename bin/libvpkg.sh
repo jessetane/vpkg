@@ -57,13 +57,9 @@ _vpkg_hook() {
     # try to bail fast if things go south
     # note: beware set -e, there are caveats
     set -e
-  
-    # make src dir and go there 
-    # unless using a custom --recipe
-    if [ -z "${opts[0]}" ]; then
-      mkdir -p "$src"
-      cd "$src"
-    fi
+    
+    # makes recipes a bit more magical.. is this good?
+    [ -d "$src" ] && cd "$src"
     
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"
@@ -98,7 +94,7 @@ _vpkg_source_exists() {
   [ -e "$VPKG_HOME"/src/"$name" ] && echo "$name: source exists" >&2 && return 0
 }
 
-_vpkg_source_install() {
+_vpkg_fetch_manually() {
   rm "$download"
   download="$(ls -A)"
   
@@ -142,10 +138,12 @@ _vpkg_build_dependencies() {
   local dep
   while read dep; do
     [ -z "$dep" ] && continue
-    local dep_name="$(echo "$dep" | sed "s/\(.*\) .*/\1/")"
-    local dep_version="$(echo "$dep" | sed "s/.* \(.*\)/\1/")"
-    #echo "$name: building dependency: $dep_name/$dep_version..."
-    vpkg build "$dep_name" "$dep_version"; [ $? != 0 ] && echo "$name: failed to build dependency: $dep_name/$dep_version" >&2 && return 1
+    dep=($dep)
+    local dep_name="${dep[0]}"
+    local dep_version="${dep[1]}"
+    [ -n "$dep_version" ] && dep="$dep_name"/"$dep_version"
+    echo "$name: building dependency: $dep..." >&2
+    vpkg build "$dep_name" "$dep_version"; [ $? != 0 ] && echo "$name: failed to build dependency: $dep" >&2 && return 1
   done < <(_vpkg_hook "dependencies")
 }
 
@@ -212,7 +210,7 @@ vpkg_lookup() {
   if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
   then
     #vpkg update &> /dev/null || {
-      echo 'warning: attempted to lookup $name, but no registries were found. try running `vpkg update`' >&2
+      echo "warning: attempted to lookup $name, but no registries were found. try running"'`vpkg update`' >&2
       return 1
     #}
   fi
@@ -284,20 +282,29 @@ vpkg_fetch() {
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     [ "$name" = "$url" ] && name="$(_vpkg_hook "name" --recipe "$download")"
     [ -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name" && return 1
+    
+    # copy recipe to etc
     mkdir -p "$VPKG_HOME"/etc/"$name"
     rm -f "$VPKG_HOME"/etc/"$name"/.vpkg
     cp "$download" "$VPKG_HOME"/etc/"$name"/.vpkg
-    _vpkg_hook "fetch"; [ $? != 0 ] && return 1
+    
+    # run fetch hook
+    _vpkg_export_name
+    _vpkg_import_name
+    _vpkg_source_exists || {
+      mkdir -p "$src"
+      _vpkg_hook "fetch"; [ $? != 0 ] && return 1
+    }
   
   # tarball?
   elif echo "$filetype" | grep -q "gzip compressed"; then
     ! tar -xvzf "$download" && _vpkg_fail && return 1
-    _vpkg_source_install || return 1
+    _vpkg_fetch_manually || return 1
   
   # zip archive?
   elif echo "$filetype" | grep -q "Zip archive"; then
     ! unzip "$download" && _vpkg_fail && return 1
-    _vpkg_source_install || return 1
+    _vpkg_fetch_manually || return 1
   
   # unknown
   else
