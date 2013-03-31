@@ -418,7 +418,7 @@ vpkg_link() {
   ln -sf "$lib"/"$build" "$lib"/"$link_name"
   
   # create executables
-  ls -A "$lib"/"$build"/bin | while read executable; do
+  ls -A "$lib"/"$build"/bin 2>/dev/null | while read executable; do
     local dest="$VPKG_HOME"/bin/"$executable"
   
     # linking happens differently depending on whether the file is executable
@@ -466,7 +466,7 @@ vpkg_unlink() {
   rm "$lib"/"$link_name"
 
   # remove old executables
-  ls -A "$old_link"/bin | while read executable; do
+  ls -A "$old_link"/bin 2> /dev/null | while read executable; do
     rm "$VPKG_HOME"/bin/"$executable"
   done
   
