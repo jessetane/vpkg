@@ -281,6 +281,7 @@ vpkg_fetch() {
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     [ "$name" = "$url" ] && name="$(_vpkg_hook "name" --recipe "$download")"
     [ -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name" && return 1
+    mkdir -p "$VPKG_HOME"/etc/"$name"
     rm -f "$VPKG_HOME"/etc/"$name"/.vpkg
     cp "$download" "$VPKG_HOME"/etc/"$name"/.vpkg
   
