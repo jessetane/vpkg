@@ -138,6 +138,17 @@ _vpkg_fail() {
   return 0
 }
 
+_vpkg_build_dependencies() {
+  local dep
+  local deps="$(_vpkg_hook "dependencies")"
+  for dep in $deps; do
+    local dep_name="$(echo "$dep" | sed "s/\(.*\) .*/\1/")"
+    local dep_version="$(echo "$dep" | sed "s/.* \(.*\)/\1/")"
+    #echo "$name: building dependency: $dep_name/$dep_version..."
+    vpkg build "$dep_name" "$dep_version"; [ $? != 0 ] && echo "$name: failed to build dependency: $dep_name/$dep_version" >&2 && return 1
+  done
+}
+
 
 # public methods
 
@@ -282,7 +293,7 @@ vpkg_fetch() {
   elif echo "$filetype" | grep -q "gzip compressed"; then
     ! tar -xvzf "$download" && _vpkg_fail && return 1
     _vpkg_source_install || return 1
-
+  
   # zip archive?
   elif echo "$filetype" | grep -q "Zip archive"; then
     ! unzip "$download" && _vpkg_fail && return 1
@@ -328,7 +339,10 @@ vpkg_build() {
     vpkg destroy "$name" "$build"; [ $? = 0 ] || return 1
   fi
 
-  # only build if we have to
+  # try to build deps
+  _vpkg_build_dependencies; [ $? != 0 ] && return 1
+  
+  # only build the package itself if we have to
   if [ ! -e "$lib"/"$build" ]; then
     mkdir -p "$lib"
     _vpkg_hook "pre_build"; [ $? = 0 ] || return 1
