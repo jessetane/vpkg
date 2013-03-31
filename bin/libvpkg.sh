@@ -146,7 +146,7 @@ vpkg_version() {
 }
 
 vpkg_usage() {
-  echo "usage: vpkg <command> [options] <package> [build] [version]"
+  echo "usage: vpkg <command> [<options>] <package> [<build>] [<version>]"
 }
 
 vpkg_update() {

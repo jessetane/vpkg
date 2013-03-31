@@ -2,15 +2,19 @@
 # .vpkg
 #
 
-url() {
-  echo "https://github.com/jessetane/vpkg"
+name() {
+  echo "vpkg"
 }
 
 version() {
   echo "testing"
 }
 
-pre_build() {
+repository() {
+  echo "https://github.com/jessetane/vpkg"
+}
+
+build() {
   
   # checkout code
   git fetch --all
@@ -21,9 +25,6 @@ pre_build() {
   cd "$lib"/"$build"
   cp -R "$src"/.git ./
   git reset --hard "$version"
-  
-  # inform vpkg that we handled the build ourselves
-  echo "$lib"/"$build" > "$intercom"
 }
 
 bootstrap() {
@@ -39,19 +40,7 @@ bootstrap() {
   lib="$VPKG_HOME"/lib/"$name"
   
   # sanity
-  [ -e "$lib"/default ] && echo "$VPKG_HOME: vpkg appears to already be installed here" >&2 && return 1
-  
-  # are you sure?
-  {
-    echo "---- welcome to vpkg ----"
-    echo "you are about to bootstrap vpkg into $VPKG_HOME"
-    read -a proceed -p "are you sure? [Y/n]: "
-    if [ "$proceed" = "n" ] || [ "$proceed" = "N" ]
-    then
-      echo "vpkg bootstrap aborted" >&2
-      return 1
-    fi
-  }
+  [ -n "$(ls -A "$VPKG_HOME")" ] && echo "$VPKG_HOME: directory is not empty" >&2 && return 1
   
   # make some dirs
   mkdir -p "$src"
