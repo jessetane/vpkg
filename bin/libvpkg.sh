@@ -142,6 +142,7 @@ _vpkg_build_dependencies() {
   local dep
   local deps="$(_vpkg_hook "dependencies")"
   for dep in $deps; do
+    echo "dep: $dep"
     local dep_name="$(echo "$dep" | sed "s/\(.*\) .*/\1/")"
     local dep_version="$(echo "$dep" | sed "s/.* \(.*\)/\1/")"
     #echo "$name: building dependency: $dep_name/$dep_version..."
@@ -263,7 +264,7 @@ vpkg_fetch() {
   
   # we don't have a recipe or source code yet so try 
   # to lookup the package from one of the registries
-  lookup="$(vpkg lookup "$url")" && url="$lookup"
+  lookup="$(vpkg lookup "$url")" &> /dev/null && url="$lookup"
   
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
