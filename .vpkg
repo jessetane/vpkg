@@ -14,13 +14,12 @@ repository() {
   echo "https://github.com/jessetane/vpkg"
 }
 
-build() {
-  
-  # checkout code
+update() {
   git fetch --all
   git fetch --tags
-  
-  # install
+}
+
+build() {
   mkdir -p "$lib"/"$build"
   cd "$lib"/"$build"
   cp -R "$src"/.git ./
@@ -76,9 +75,6 @@ profile() {
 
 # vpkg root
 export VPKG_HOME="'"$VPKG_HOME"'"
-
-# vpkg registries - add as many urls as you like, seperated by newlines
-export VPKG_REGISTRIES="file://${VPKG_HOME}/src/vpkg/test/fixtures/registry.sample"
 
 # add bin to PATH
 export PATH="$VPKG_HOME"/bin:"$PATH"

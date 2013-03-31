@@ -192,8 +192,6 @@ vpkg_update() {
 }
 
 vpkg_lookup() {
-  return 1
-  
   args=("$@")
   argue || return 1
   
@@ -202,10 +200,10 @@ vpkg_lookup() {
   # update registries if the cache is empty
   if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
   then
-    vpkg update &> /dev/null || {
+    #vpkg update &> /dev/null || {
       echo 'warning: no registries found. try running `vpkg update`' >&2
       return 1
-    }
+    #}
   fi
   
   # attempt to lookup a url for $name from your registries
@@ -256,12 +254,6 @@ vpkg_fetch() {
   # to lookup the package from one of the registries
   lookup="$(vpkg lookup "$url")" && url="$lookup"
   
-  # # is it git?
-  # git ls-remote "$url" &> /dev/null && {
-  #   git clone "$url" "$src"
-  #   return 0
-  # }
-  
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
   cd "$tmp"
@@ -277,13 +269,14 @@ vpkg_fetch() {
   download="$(pwd)/$(ls -A)"
   filetype="$(file "$download" | sed "s/.*: //")"
 
-  # shell script?
+  # recipe?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     [ "$name" = "$url" ] && name="$(_vpkg_hook "name" --recipe "$download")"
     [ -z "$name" ] && _vpkg_fail "$url: recipe did not provide a name, pass one manually with --name" && return 1
     mkdir -p "$VPKG_HOME"/etc/"$name"
     rm -f "$VPKG_HOME"/etc/"$name"/.vpkg
     cp "$download" "$VPKG_HOME"/etc/"$name"/.vpkg
+    _vpkg_hook "fetch"; [ $? != 0 ] && return 1
   
   # tarball?
   elif echo "$filetype" | grep -q "gzip compressed"; then
