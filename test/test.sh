@@ -2,6 +2,18 @@
 # test.sh
 #
 
+foo() {
+  echo "asdf"
+}
+
+while read line; do
+  echo "hey: $line"
+done < <(foo)
+
+echo "AHA: $?"
+
+exit 1
+
 src="/Users/jessetane/Dropbox/software/src"
 rm -rf "$src"/vpkg/test/tmp
 mkdir -p "$src"/vpkg/test/tmp

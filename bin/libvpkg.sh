@@ -142,9 +142,12 @@ _vpkg_build_dependencies() {
     local dep_name="${dep[0]}"
     local dep_version="${dep[1]}"
     [ -n "$dep_version" ] && dep="$dep_name"/"$dep_version"
-    echo "$name: building dependency: $dep..." >&2
+    # echo "$name: building dependency: $dep..." >&2
     vpkg build "$dep_name" "$dep_version"; [ $? != 0 ] && echo "$name: failed to build dependency: $dep" >&2 && return 1
   done < <(_vpkg_hook "dependencies")
+  
+  # if we got here it worked
+  return 0
 }
 
 
@@ -221,7 +224,7 @@ vpkg_lookup() {
   
     # in a subshell, source the registry and do a lookup
     recipe_url="$(
-      unset "$name";
+      unset "$name" 2> /dev/null;
       source "$registry_cache/$registry";
       [ -n "${!name}" ] && echo "${!name}"
     )"
@@ -261,7 +264,7 @@ vpkg_fetch() {
   
   # we don't have a recipe or source code yet so try 
   # to lookup the package from one of the registries
-  lookup="$(vpkg lookup "$url")" && url="$lookup"
+  lookup="$(vpkg lookup "$url" 2> /dev/null)" && url="$lookup"
   
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
@@ -568,7 +571,7 @@ vpkg_load() {
   _vpkg_hook "pre_load"; [ $? = 0 ] || return 1
   
   # add package/version/bin to PATH
-  [ -n "$PATH" ] && PATH=":$PATH" 
+  [ -n "$PATH" ] && PATH=":$PATH"
   PATH="$lib"/"$build"/bin"$PATH"
   
   _vpkg_hook "post_load"; [ $? = 0 ] || return 1
