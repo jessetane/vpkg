@@ -452,7 +452,6 @@ vpkg_link() {
     if [ -x "$lib"/"$build"/bin/"$executable" ]; then
     
       # link via exec
-      echo "export PATH=${VPKG_HOME}/bin:\$PATH" > "$dest"
       echo "exec ${lib}/${build}/bin/$executable "'$@' >> "$dest"
       chmod +x "$dest"
     else
