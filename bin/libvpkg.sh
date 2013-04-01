@@ -142,9 +142,18 @@ _vpkg_build_dependencies() {
     local dep_name="${dep[0]}"
     local dep_version="${dep[1]}"
     [ -n "$dep_version" ] && dep="$dep_name"/"$dep_version"
-    # echo "$name: building dependency: $dep..." >&2
-    vpkg build "$dep_name" "$dep_version"; [ $? != 0 ] && echo "$name: failed to build dependency: $dep" >&2 && return 1
+    echo "$name: building dependency: $dep..." >&2
+    vpkg build "$dep_name" "$dep_version"
+    local status="$?"
+    echo "$name: done building dependency, status was: $status"
+    if [ "$status" != 0 ]; then
+      echo "$name: failed to build dependency: $dep" >&2
+      return "$status"
+    fi
   done < <(_vpkg_hook "dependencies")
+  
+  # ensure the proper name is passed back up
+  _vpkg_export_name
   
   # if we got here it worked
   return 0
@@ -336,7 +345,8 @@ vpkg_build() {
   _vpkg_init_defaults
   
   # bail if --name and source exists
-  [ -n "$rename" ] && [ -e "$VPKG_HOME"/src/"$rename" ] && echo "$rename: source exists" >&2 && return 1
+  [ -n "$rename" ] && 
+  [ -e "$VPKG_HOME"/src/"$rename" ] && echo "$rename: source exists" >&2 && return 1
   
   # get source or recipe
   vpkg fetch "$name" --name "$rename"; [ $? = 0 ] || return 1
@@ -359,7 +369,7 @@ vpkg_build() {
     
     # if the build hook is not defined, hooking it will return 78
     # indicating that we should try to copy over the files manually
-    _vpkg_hook "build";
+    _vpkg_hook "build"
     status="$?"
     if [ "$status" = 78 ]; then
       cp -R "$src" "$lib"/"$build"
@@ -435,7 +445,7 @@ vpkg_link() {
   ln -sf "$lib"/"$build" "$lib"/"$link_name"
   
   # create executables
-  ls -A "$lib"/"$build"/bin 2>/dev/null | while read executable; do
+  ls -A "$lib"/"$build"/bin 2> /dev/null | while read executable; do
     local dest="$VPKG_HOME"/bin/"$executable"
   
     # linking happens differently depending on whether the file is executable
