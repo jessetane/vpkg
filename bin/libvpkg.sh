@@ -602,7 +602,7 @@ vpkg_unload() {
   if ! echo "$PATH" | grep -q "$lib/[^/]*/bin"; then
     echo "$name: not loaded" >&2
     return 0
-  elif [ -n "$build" ] &&  ! echo "$PATH" | grep -q "$lib/$build/bin"; then
+  elif [ -n "$build" ] && ! echo "$PATH" | grep -q "$lib/$build/bin"; then
     echo "$name/$build: not loaded" >&2
     return 1
   fi
