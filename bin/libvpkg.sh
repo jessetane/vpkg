@@ -28,7 +28,6 @@ vpkg() {
     "uninstall" ) __vpkg_uninstall "$@";;
     "load" ) __vpkg_load "$@";;
     "unload" ) __vpkg_unload "$@";;
-    "include" ) __vpkg_include "$@";;
     * )
       
       # parse options
@@ -167,16 +166,6 @@ __vpkg_unload() {
   argue || return 1
   __vpkg_init__ || return 1
   __vpkg_unload__ "$build"
-}
-
-__vpkg_include() {
-  args=("$@")
-  argue "--as, +"\
-        "-r, --rebuild" || return 1
-  local rename="${opts[0]}"
-  local rebuild="${opts[1]}"
-  __vpkg_init__ || return 1
-  __vpkg_include__
 }
 
 
