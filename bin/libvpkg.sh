@@ -516,7 +516,7 @@ __vpkg_link__() {
   # create link
   ln -sf "$lib"/"$build" "$lib"/current
   
-  # create executables
+  # executables
   while read executable; do
     local dest="$VPKG_HOME"/bin/"$executable"
   
@@ -532,6 +532,18 @@ __vpkg_link__() {
       ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
     fi
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
+  
+  # man pages
+  if [ -d "$lib"/"$build"/share/man ]; then
+    man_dest="$VPKG_HOME"/share/man
+    man_source="$lib"/"$build"/share/man
+    while read mangroup; do
+      while read manpage; do
+        mkdir -p "$man_dest"/"$mangroup"
+        ln -s "$man_source"/"$manpage" "$man_dest"/"$mangroup"/
+      done < <(ls -A "$man_source"/"$mangroup" 2> /dev/null)
+    done < <(ls -A "$man_source" 2> /dev/null)
+  fi
   
   # forget old executables
   hash -r
@@ -564,6 +576,16 @@ __vpkg_unlink__() {
   while read executable; do
     rm "$VPKG_HOME"/bin/"$executable"
   done < <(ls -A "$lib"/"$link"/bin 2> /dev/null)
+  
+  # remove man pages
+  if [ -d "$lib"/"$link"/share/man ]; then
+    man_source="$lib"/"$link"/share/man
+    while read mangroup; do
+      while read manpage; do
+        rm "$VPKG_HOME"/share/man/"$mangroup"/"$manpage"
+      done < <(ls -A "$man_source"/"$mangroup" 2> /dev/null)
+    done < <(ls -A "$man_source" 2> /dev/null)
+  fi
   
   # forget old executables
   hash -r
@@ -624,18 +646,4 @@ __vpkg_unload__() {
   # edit PATH
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
   export PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
-}
-
-__vpkg_include__() {
-  __vpkg_load__; [ $? != 0 ] && return 1
-  
-  # if there are sourceables, source them
-  while read executable; do
-    executable="$lib"/"$build"/bin/"$executable"
-    
-    # only non executables should be sourced
-    if [ ! -x "$executable" ]; then
-      . "$executable"
-    fi
-  done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
 }
