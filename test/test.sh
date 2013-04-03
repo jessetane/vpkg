@@ -1,19 +1,25 @@
+#!/usr/bin/env bash
 #
 # test.sh
 #
 
-src="/Users/jessetane/Dropbox/software/src"
-rm -rf "$src"/vpkg/test/tmp
-mkdir -p "$src"/vpkg/test/tmp
-cd "$src"/vpkg/test/tmp
-curl -fL# "file://$src"/vpkg/.vpkg | SOURCE="file://$src" bash
+#set -x
 
-# 
-cp -R "$src"/vpkg/test/fixtures/* ./src/
-cd "$src"/vpkg/test/tmp
-. .vpkgrc
-vpkg build lib1 0.0.1
-vpkg build lib1 0.0.2
-vpkg build prgm1
-vpkg build prgm2
-vpkg build main
+# sandbox
+src="/Users/jessetane/Dropbox/software/src"
+rm -rf "$src"/spm/test/tmp
+mkdir -p "$src"/spm/test/tmp
+cd "$src"/spm/test/tmp
+
+# bootstrap
+curl -fL# "file://$src"/spm/package.sh | SOURCE="file://$src" bash
+
+# fixtures
+cp -R "$src"/spm/test/fixtures/* ./src/
+cd "$src"/spm/test/tmp
+. .spmrc
+spm build lib1 0.0.1
+spm build lib1 0.0.2
+spm build prgm1
+spm build prgm2
+spm build main
