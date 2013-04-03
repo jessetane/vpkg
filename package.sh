@@ -85,4 +85,4 @@ export PATH="$VPKG_HOME"/bin:"$PATH"
 }
 
 # bootstrap?
-[ -z "$VPKG_HOME" ] && bootstrap
+[ -z "$BASH_SOURCE" ] && bootstrap

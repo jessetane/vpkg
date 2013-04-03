@@ -65,7 +65,6 @@ __vpkg_usage() {
   echo "usage: vpkg <command> [<options>] <package> [<build>] [<version>]"
 }
 
-
 # public command wrappers
 # -----------------------
 
@@ -114,7 +113,7 @@ __vpkg_link() {
         "-r, --rebuild" || return 1
   local rename="${opts[0]}"
   local rebuild="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"$name"/current)")"
+  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
   __vpkg_init__ || return 1
   __vpkg_link__
 }
@@ -122,7 +121,7 @@ __vpkg_link() {
 __vpkg_unlink() {
   args=("$@")
   argue || return 1
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"$name"/current)")"
+  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
   __vpkg_init__ || return 1
   __vpkg_unlink__ "$build"
 }
@@ -133,7 +132,7 @@ __vpkg_install() {
         "-r, --rebuild" || return 1
   local rename="${opts[0]}"
   local rebuild="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"$name"/current)")"
+  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
   __vpkg_init__ || return 1
   __vpkg_defaults__
   __vpkg_link__
@@ -145,7 +144,7 @@ __vpkg_uninstall() {
         "-p, --purge" || return 1
   local destroy="${opts[0]}"
   local purge="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"$name"/current)")"
+  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
   __vpkg_init__ || return 1
   __vpkg_defaults__
   __vpkg_uninstall__
@@ -167,7 +166,6 @@ __vpkg_unload() {
   __vpkg_init__ || return 1
   __vpkg_unload__ "$build"
 }
-
 
 # internal methods
 # ----------------

@@ -3,7 +3,7 @@
 # test.sh
 #
 
-#set -x
+set -x
 
 # sandbox
 src="/Users/jessetane/Dropbox/software/src"
