@@ -1,0 +1,5 @@
+. vpkg.sh
+vpkg load lib1 0.0.1
+. lib1.sh
+
+echo "prgm1: $(foo)"

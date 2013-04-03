@@ -1,0 +1,6 @@
+. vpkg.sh
+vpkg load prgm1
+vpkg load prgm2
+
+prgm1
+prgm2
