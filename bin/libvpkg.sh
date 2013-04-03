@@ -475,7 +475,7 @@ __vpkg_destroy__() {
 
 __vpkg_link__() {
   local lib="$VPKG_HOME"/lib/"$name"
-  local executable
+  local executable mangroup manpage
   
   # is anything suitable already linked?
   if [ -n "$build" ]; then
@@ -522,12 +522,12 @@ __vpkg_link__() {
   
   # man pages
   if [ -d "$lib"/"$build"/share/man ]; then
-    man_dest="$VPKG_HOME"/share/man
-    man_source="$lib"/"$build"/share/man
+    local man_dest="$VPKG_HOME"/share/man
+    local man_source="$lib"/"$build"/share/man
     while read mangroup; do
       while read manpage; do
         mkdir -p "$man_dest"/"$mangroup"
-        ln -s "$man_source"/"$manpage" "$man_dest"/"$mangroup"/
+        ln -s "$man_source"/"$mangroup"/"$manpage" "$man_dest"/"$mangroup"/
       done < <(ls -A "$man_source"/"$mangroup" 2> /dev/null)
     done < <(ls -A "$man_source" 2> /dev/null)
   fi
@@ -539,7 +539,7 @@ __vpkg_link__() {
 __vpkg_unlink__() {
   local build="$1"
   local lib="$VPKG_HOME"/lib/"$name"
-  local executable
+  local executable mangroup manpage
   
   # was a build specd?
   if [ -n "$build" ]; then
@@ -566,7 +566,7 @@ __vpkg_unlink__() {
   
   # remove man pages
   if [ -d "$lib"/"$link"/share/man ]; then
-    man_source="$lib"/"$link"/share/man
+    local man_source="$lib"/"$link"/share/man
     while read mangroup; do
       while read manpage; do
         rm "$VPKG_HOME"/share/man/"$mangroup"/"$manpage"

@@ -3,8 +3,6 @@
 # test.sh
 #
 
-set -x
-
 # sandbox
 src="/Users/jessetane/Dropbox/software/src"
 rm -rf "$src"/vpkg/test/tmp
