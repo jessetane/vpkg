@@ -228,14 +228,6 @@ __vpkg_run_hook__() {
     # cd into the package's src dir if it exists
     [ -d "$VPKG_HOME"/src/"$name" ] && cd "$VPKG_HOME"/src/"$name"
     
-    # export handy variables for the recipe to use
-    export NAME="$name"
-    export BUILD="$build"
-    export VERSION="$version"
-    export ETC="$VPKG_HOME"/etc/"$name"
-    export SRC="$VPKG_HOME"/src/"$name"
-    export LIB="$VPKG_HOME"/lib/"$name"/"$build"
-    
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"   # clean arbitrary hooks
     build() { return 78; }    # build is required, so it must return an error by default
@@ -249,6 +241,14 @@ __vpkg_run_hook__() {
       tmp="$(version)"
       [ -n "$tmp" ] && version="$tmp"
     fi
+    
+    # export handy variables for the recipe to use
+    export NAME="$name"
+    export BUILD="$build"
+    export VERSION="$version"
+    export ETC="$VPKG_HOME"/etc/"$name"
+    export SRC="$VPKG_HOME"/src/"$name"
+    export LIB="$VPKG_HOME"/lib/"$name"/"$build"
     
     # run hook
     "$hook"
