@@ -212,8 +212,8 @@ __vpkg_run_hook__() {
     # beware: set -e comes with caveats
     set -e
     
-    # cd to home
-    cd "$VPKG_HOME"
+    # cd into the package's src dir if it exists
+    [ -d "$VPKG_HOME"/src/"$name" ] && cd "$VPKG_HOME"/src/"$name"
     
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"   # clean arbitrary hooks
@@ -229,10 +229,13 @@ __vpkg_run_hook__() {
       [ -n "$tmp" ] && version="$tmp"
     fi
     
-    # # export handy variables for the recipe to use
-    export NAME="$name"
-    export BUILD="$build"
-    export VERSION="$version"
+    # handy environment variables for the recipe to use
+    NAME="$name"
+    BUILD="$build"
+    VERSION="$version"
+    ETC="$VPKG_HOME"/etc/"$name"
+    SRC="$VPKG_HOME"/src/"$name"
+    LIB="$VPKG_HOME"/lib/"$name"/"$build"
     
     # run hook
     "$hook"
@@ -290,8 +293,7 @@ __vpkg_lookup__() {
   local recipe_url
   
   # update registries if the cache is empty
-  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]
-  then
+  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]; then
     #vpkg update &> /dev/null || {
       echo "warning: attempted to lookup $name, but no registries were found. try running"'`vpkg update`' >&2
       return 1

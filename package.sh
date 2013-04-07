@@ -16,14 +16,14 @@ repository() {
 }
 
 update() {
+  cd src/"$NAME"
   git fetch --all
   git fetch --tags
 }
 
 build() {
-  mkdir -p "$LIB"
-  cd "$LIB"
-  cp -R "$SRC"/.git ./
+  mkdir -p lib/"$NAME"/"$BUILD"
+  cp -R src/"$NAME"/.git lib/"$NAME"/"$BUILD"
   git reset --hard "$VERSION"
 }
 
