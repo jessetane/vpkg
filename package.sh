@@ -16,14 +16,15 @@ repository() {
 }
 
 update() {
-  cd src/"$NAME"
+  cd "$SRC"
   git fetch --all
   git fetch --tags
 }
 
 build() {
-  mkdir -p lib/"$NAME"/"$BUILD"
-  cp -R src/"$NAME"/.git lib/"$NAME"/"$BUILD"
+  mkdir -p "$LIB"
+  cp -R "$SRC"/.git "$LIB"
+  cd "$LIB"
   git reset --hard "$VERSION"
 }
 
@@ -41,8 +42,8 @@ bootstrap() {
   
   # make some dirs
   mkdir -p "$VPKG_HOME"/src/"$name"
-  mkdir -p "$VPKG_HOME"/etc/"$name"
   mkdir -p "$VPKG_HOME"/share/man
+  mkdir -p "$VPKG_HOME"/etc
   mkdir -p "$VPKG_HOME"/tmp
   mkdir -p "$VPKG_HOME"/bin
   cd "$VPKG_HOME"/src/"$name"
