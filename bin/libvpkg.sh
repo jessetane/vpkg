@@ -209,11 +209,11 @@ __vpkg_run_hook__() {
   # run hooks in subshell for safety
   (
     # try to bail fast if things go south
-    # note: beware set -e comes with caveats
+    # beware: set -e comes with caveats
     set -e
     
-    # cd into the package's src dir if it exists
-    [ -d "$VPKG_HOME"/src/"$name" ] && cd "$VPKG_HOME"/src/"$name"
+    # cd to home
+    cd "$VPKG_HOME"
     
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"   # clean arbitrary hooks
@@ -229,13 +229,10 @@ __vpkg_run_hook__() {
       [ -n "$tmp" ] && version="$tmp"
     fi
     
-    # export handy variables for the recipe to use
+    # # export handy variables for the recipe to use
     export NAME="$name"
     export BUILD="$build"
     export VERSION="$version"
-    export ETC="$VPKG_HOME"/etc/"$name"
-    export SRC="$VPKG_HOME"/src/"$name"
-    export LIB="$VPKG_HOME"/lib/"$name"/"$build"
     
     # run hook
     "$hook"
@@ -345,9 +342,7 @@ __vpkg_fetch__() {
   
   # do we have a recipe?
   if [ -e "$VPKG_HOME"/etc/"$name"/package.sh ]; then
-    mkdir -p "$VPKG_HOME"/src/"$name"
-    __vpkg_run_hook__ "fetch"; [ $? != 0 ] && return 1
-    return 0
+    __vpkg_run_hook__ "fetch"; return $?
   fi
   
   # do we have $name in our registries?
@@ -382,9 +377,8 @@ __vpkg_fetch__() {
     rm -f "$VPKG_HOME"/etc/"$name"/package.sh
     cp "$download" "$VPKG_HOME"/etc/"$name"/package.sh
     
-    # run fetch hook
-    mkdir -p "$VPKG_HOME"/src/"$name"
-    __vpkg_run_hook__ "fetch"; [ $? != 0 ] && return 1
+    # try again now that we have a recipe
+    __vpkg_fetch__; return $?
   
   # archive? something else?
   else
@@ -392,14 +386,14 @@ __vpkg_fetch__() {
     # tarball?
     if echo "$filetype" | grep -q "gzip compressed"; then
       ! tar -xvzf "$download" -C "$tmp" && return 1
-  
+    
     # zip archive?
     elif echo "$filetype" | grep -q "Zip archive"; then
       ! unzip "$download" -d "$tmp" && return 1
-  
+    
     # unknown
     else
-      echo "fetch: unknown filetype: $filetype" >&2 && return 1 
+      echo "fetch: unknown filetype: $filetype" >&2 && return 1
     fi
     
     # get the name of whatever was unarchived
@@ -493,8 +487,7 @@ __vpkg_link__() {
   # build stuff if we need to
   if [ ! -e "$lib"/"$build" ]; then
     __vpkg_build__; [ $? != 0 ] && return 1
-    __vpkg_link__
-    return 0
+    __vpkg_link__; return $?
   fi
   
   # unlink any others
@@ -606,8 +599,7 @@ __vpkg_load__() {
   # build stuff if we need to
   if [ ! -e "$VPKG_HOME"/lib/"$name"/"$build" ]; then
     __vpkg_build__; [ $? != 0 ] && return 1
-    __vpkg_load__
-    return 0
+    __vpkg_load__; return $?
   fi
   
   __vpkg_unload__ &> /dev/null; [ $? != 0 ] && return 1
