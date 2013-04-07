@@ -146,7 +146,6 @@ __vpkg_uninstall() {
   local purge="${opts[1]}"
   local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
   __vpkg_init__ || return 1
-  __vpkg_defaults__
   __vpkg_uninstall__
 }
 
