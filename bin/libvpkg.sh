@@ -579,6 +579,7 @@ __vpkg_uninstall__() {
   # --purge? --destroy?
   if [ -n "$purge" ]; then
     __vpkg_destroy__; [ $? = 0 ] || return 1
+    echo "WTF: $purge"
     rm -rf "$VPKG_HOME"/{lib, etc, src, tmp}/"$name"
   elif [ -n "$destroy" ]; then
     __vpkg_destroy__
