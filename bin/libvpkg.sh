@@ -9,28 +9,96 @@ vpkg() {
   . libargue.sh || return 1
   
   # args/opts
-  local tmps=()
+  local argv=("$@")
   local opts=()
-  local args=("$@")
+  local tmps=()
   local cmd="$1" && shift
+  local args=("$@")
   local name build version
   
   # proxy to cmd
   case "$cmd" in
-    "update" ) __vpkg_update "$@";;
-    "lookup" ) __vpkg_lookup "$@";;
-    "fetch" ) __vpkg_fetch "$@";;
-    "build" ) __vpkg_build "$@";;
-    "destroy" ) __vpkg_destroy "$@";;
-    "link" ) __vpkg_link "$@";;
-    "unlink" ) __vpkg_unlink "$@";;
-    "install" ) __vpkg_install "$@";;
-    "uninstall" ) __vpkg_uninstall "$@";;
-    "load" ) __vpkg_load "$@";;
-    "unload" ) __vpkg_unload "$@";;
-    * )
+    
+    "update" )
+      argue || return 1
+      __vpkg_update
+      
+    ;; "lookup" )
+      argue || return 1
+      __vpkg_init || return 1
+      __vpkg_lookup
+    
+    ;; "fetch" )
+      argue "--as, +" || return 1
+      local rename="${opts[0]}"
+      __vpkg_init || return 1
+      __vpkg_fetch
+    
+    ;; "build" )
+      argue "--as, +"\
+            "-r, --rebuild" || return 1
+      local rename="${opts[0]}"
+      local rebuild="${opts[1]}"
+      __vpkg_init || return 1
+      __vpkg_defaults
+      __vpkg_build
+    
+    ;; "destroy" )
+      argue || return 1
+      __vpkg_init || return 1
+      __vpkg_destroy
+    
+    ;; "link" )
+      argue "--as, +"\
+            "-r, --rebuild" || return 1
+      local rename="${opts[0]}"
+      local rebuild="${opts[1]}"
+      local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
+      __vpkg_init || return 1
+      __vpkg_link
+    
+    ;; "unlink" )
+      argue || return 1
+      local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
+      __vpkg_init || return 1
+      __vpkg_unlink "$build"
+    
+    ;; "install" )
+      argue "--as, +"\
+            "-r, --rebuild" || return 1
+      local rename="${opts[0]}"
+      local rebuild="${opts[1]}"
+      local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
+      __vpkg_init || return 1
+      __vpkg_defaults
+      __vpkg_link
+    
+    ;; "uninstall" )
+      argue "-d, --destroy"\
+            "-p, --purge" || return 1
+      local destroy="${opts[0]}"
+      local purge="${opts[1]}"
+      local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
+      __vpkg_init || return 1
+      __vpkg_uninstall
+    
+    ;; "load" )
+      argue "--as, +"\
+            "-r, --rebuild" || return 1
+      local rename="${opts[0]}"
+      local rebuild="${opts[1]}"
+      __vpkg_init || return 1
+      __vpkg_load
+
+    ;; "unload" )
+      argue || return 1
+      __vpkg_init || return 1
+      __vpkg_unload "$build"
+    
+    ;; * )
       
       # parse options
+      args=("${argv[@]}")
       argue "-v, --version"\
             "-h, --help" || return 1
 
@@ -65,111 +133,7 @@ __vpkg_usage() {
   echo "usage: vpkg <command> [<options>] <package> [<build>] [<version>]"
 }
 
-# public command wrappers
-# -----------------------
-
-__vpkg_update() {
-  args=("$@")
-  argue || return 1
-  __vpkg_update__
-}
-
-__vpkg_lookup() {
-  args=("$@")
-  argue || return 1
-  __vpkg_init__ || return 1
-  __vpkg_lookup__
-}
-
-__vpkg_fetch() {
-  args=("$@")
-  argue "--as, +" || return 1
-  local rename="${opts[0]}"
-  __vpkg_init__ || return 1
-  __vpkg_fetch__
-}
-
-__vpkg_build() {
-  args=("$@")
-  argue "--as, +"\
-        "-r, --rebuild" || return 1
-  local rename="${opts[0]}"
-  local rebuild="${opts[1]}"
-  __vpkg_init__ || return 1
-  __vpkg_defaults__
-  __vpkg_build__
-}
-
-__vpkg_destroy() {
-  args=("$@")
-  argue || return 1
-  __vpkg_init__ || return 1
-  __vpkg_destroy__
-}
-
-__vpkg_link() {
-  args=("$@")
-  argue "--as, +"\
-        "-r, --rebuild" || return 1
-  local rename="${opts[0]}"
-  local rebuild="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
-  __vpkg_init__ || return 1
-  __vpkg_link__
-}
-
-__vpkg_unlink() {
-  args=("$@")
-  argue || return 1
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
-  __vpkg_init__ || return 1
-  __vpkg_unlink__ "$build"
-}
-
-__vpkg_install() {
-  args=("$@")
-  argue "--as, +"\
-        "-r, --rebuild" || return 1
-  local rename="${opts[0]}"
-  local rebuild="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
-  __vpkg_init__ || return 1
-  __vpkg_defaults__
-  __vpkg_link__
-}
-
-__vpkg_uninstall() {  
-  args=("$@")
-  argue "-d, --destroy"\
-        "-p, --purge" || return 1
-  local destroy="${opts[0]}"
-  local purge="${opts[1]}"
-  local link="$(basename "$(readlink "$VPKG_HOME"/lib/"${args[0]}"/current)")"
-  __vpkg_init__ || return 1
-  __vpkg_uninstall__
-}
-
-__vpkg_load() {
-  args=("$@")
-  argue "--as, +"\
-        "-r, --rebuild" || return 1
-  local rename="${opts[0]}"
-  local rebuild="${opts[1]}"
-  __vpkg_init__ || return 1
-  __vpkg_load__
-}
-
-__vpkg_unload() {
-  args=("$@")
-  argue || return 1
-  __vpkg_init__ || return 1
-  __vpkg_unload__ "$build"
-}
-
-# internal methods
-# ----------------
-
-__vpkg_init__() {
+__vpkg_init() {
   name="${args[0]}"
   build="${args[1]}"
   version="${args[2]}"
@@ -181,16 +145,16 @@ __vpkg_init__() {
   fi
 }
 
-__vpkg_defaults__() {
+__vpkg_defaults() {
   [ -z "$build" ] && build="default"
   [ -z "$version" ] && version="$build"
 }
 
-__vpkg_push_temp__() {
+__vpkg_push_temp() {
   tmps=("${#tmps[@]}" "$1")
 }
 
-__vpkg_run_hook__() {
+__vpkg_run_hook() {
   local hook="$1"
   local recipe="$VPKG_HOME"/etc/"$name"/package.sh && [ -n "$2" ] && recipe="$2"
   
@@ -241,7 +205,7 @@ __vpkg_run_hook__() {
   )
 }
 
-__vpkg_choose_package_name__() {  
+__vpkg_choose_package_name() {  
   local n=0
   local original="$1"
   local default="$original"
@@ -264,7 +228,7 @@ __vpkg_choose_package_name__() {
   fi
 }
 
-__vpkg_build_deps__() {
+__vpkg_build_deps() {
   local dependant="$name"
   local dep
   local name="$name"
@@ -278,16 +242,16 @@ __vpkg_build_deps__() {
     version="$build"
     
     # echo "$dependant: building dependency: $name $build..." >&2
-    __vpkg_defaults__
-    __vpkg_build__
-  done < <(__vpkg_run_hook__ "dependencies")
+    __vpkg_defaults
+    __vpkg_build
+  done < <(__vpkg_run_hook "dependencies")
 }
 
-__vpkg_update__() {
+__vpkg_update() {
   echo "update.private: $name: not-implemented" >&2
 }
 
-__vpkg_lookup__() {
+__vpkg_lookup() {
   local registry_cache="$VPKG_HOME"/etc/vpkg
   local recipe_url
   
@@ -322,7 +286,7 @@ __vpkg_lookup__() {
   echo "$recipe_url"
 }
 
-__vpkg_fetch__() {
+__vpkg_fetch() {
   local tmp
   local url
   local download
@@ -343,18 +307,18 @@ __vpkg_fetch__() {
   
   # do we have a recipe?
   if [ -e "$VPKG_HOME"/etc/"$name"/package.sh ]; then
-    __vpkg_run_hook__ "fetch"; return $?
+    __vpkg_run_hook "fetch"; return $?
   fi
   
   # do we have $name in our registries?
-  url="$(__vpkg_lookup__ 2> /dev/null)" || url="$name"
+  url="$(__vpkg_lookup 2> /dev/null)" || url="$name"
   
   # we should have a valid url by now
   ! curl -I "$url" &> /dev/null && echo "$url: package not registered and not a valid URL" >&2 && return 1
   
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
-  __vpkg_push_temp__ "$tmp"
+  __vpkg_push_temp "$tmp"
   
   # try to download file
   # do in subshell for cd
@@ -366,11 +330,12 @@ __vpkg_fetch__() {
   
   # what'd we get?
   download="${tmp}/$(ls -A "$tmp")"
-  filetype="$(file "$download" | sed "s/.*: //")"
-
+  filetype="$(file "$download" | sed "s/[^:]*: //")"
+  echo "ftype: $filetype"
+  
   # recipe?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
-    [ -n "$rename" ] && name="$rename" || name="$(__vpkg_run_hook__ "name" "$download")"
+    [ -n "$rename" ] && name="$rename" || name="$(__vpkg_run_hook "name" "$download")"
     [ -z "$name" ] && echo "$url: recipe did not provide a name, try passing one manually: "'`vpkg <command> <url> --as <name>`' && return 1
     
     # copy recipe to etc
@@ -379,7 +344,7 @@ __vpkg_fetch__() {
     cp "$download" "$VPKG_HOME"/etc/"$name"/package.sh
     
     # try again now that we have a recipe
-    __vpkg_fetch__; return $?
+    __vpkg_fetch; return $?
   
   # archive? something else?
   else
@@ -407,7 +372,7 @@ __vpkg_fetch__() {
     
     # otherwise give the user a chance
     else
-      __vpkg_choose_package_name__ "$download"
+      __vpkg_choose_package_name "$download"
       [ -e "$VPKG_HOME"/src/"$name" ] && echo "$name: source exists" >&2 && return 1
     fi
     
@@ -419,19 +384,18 @@ __vpkg_fetch__() {
   return 0
 }
 
-__vpkg_build__() {
-  # local name="$name"
+__vpkg_build() {
   local build="$build"
   local version="$version"
   local rename="$rename"
   local rebuild="$rebuild"
   
-  __vpkg_fetch__; [ $? != 0 ] && return 1  
-  __vpkg_build_deps__; [ $? != 0 ] && return 1
+  __vpkg_fetch; [ $? != 0 ] && return 1  
+  __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # if --rebuild, destroy first
   if [ -n "$rebuild" ]; then
-    __vpkg_destroy__; [ $? != 0 ] && return 1
+    __vpkg_destroy; [ $? != 0 ] && return 1
   fi
   
   # already built?
@@ -441,7 +405,7 @@ __vpkg_build__() {
   mkdir -p "$VPKG_HOME"/lib/"$name"
   
   # hook
-  __vpkg_run_hook__ "build"
+  __vpkg_run_hook "build"
   status="$?"
 
   # build manually?
@@ -452,15 +416,15 @@ __vpkg_build__() {
   fi
 }
 
-__vpkg_destroy__() {
+__vpkg_destroy() {
   local lib="$VPKG_HOME"/lib/"$name"
   
-  __vpkg_unload__ "$build" &> /dev/null; [ $? != 0 ] && return 1
-  __vpkg_unlink__ "$build" &> /dev/null; [ $? != 0 ] && return 1
-  __vpkg_defaults__
+  __vpkg_unload "$build" &> /dev/null; [ $? != 0 ] && return 1
+  __vpkg_unlink "$build" &> /dev/null; [ $? != 0 ] && return 1
+  __vpkg_defaults
   
   if [ -e "$lib"/"$build" ]; then
-    __vpkg_run_hook__ "destroy"; [ $? = 0 ] || return 1
+    __vpkg_run_hook "destroy"; [ $? = 0 ] || return 1
     rm -rf "$lib"/"$build"
     [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
   else
@@ -468,7 +432,7 @@ __vpkg_destroy__() {
   fi
 }
 
-__vpkg_link__() {
+__vpkg_link() {
   local lib="$VPKG_HOME"/lib/"$name"
   local executable mangroup manpage
   
@@ -483,16 +447,16 @@ __vpkg_link__() {
     fi
   fi
   
-  __vpkg_defaults__
+  __vpkg_defaults
   
   # build stuff if we need to
   if [ ! -e "$lib"/"$build" ]; then
-    __vpkg_build__; [ $? != 0 ] && return 1
-    __vpkg_link__; return $?
+    __vpkg_build; [ $? != 0 ] && return 1
+    __vpkg_link; return $?
   fi
   
   # unlink any others
-  __vpkg_unlink__ &> /dev/null; [ $? = 0 ] || return 1
+  __vpkg_unlink &> /dev/null; [ $? = 0 ] || return 1
   
   # create link
   ln -sf "$lib"/"$build" "$lib"/current
@@ -530,7 +494,7 @@ __vpkg_link__() {
   hash -r
 }
 
-__vpkg_unlink__() {
+__vpkg_unlink() {
   local build="$1"
   local lib="$VPKG_HOME"/lib/"$name"
   local executable mangroup manpage
@@ -572,21 +536,21 @@ __vpkg_unlink__() {
   hash -r
 }
 
-__vpkg_uninstall__() {
-  __vpkg_unload__ "$build" &> /dev/null; [ $? = 0 ] || return 1
-  __vpkg_unlink__ "$build" &> /dev/null; [ $? = 0 ] || return 1
+__vpkg_uninstall() {
+  __vpkg_unload "$build" &> /dev/null; [ $? = 0 ] || return 1
+  __vpkg_unlink "$build" &> /dev/null; [ $? = 0 ] || return 1
   
   # --purge? --destroy?
   if [ -n "$purge" ]; then
-    __vpkg_destroy__; [ $? = 0 ] || return 1
+    __vpkg_destroy; [ $? = 0 ] || return 1
     echo "WTF: $purge"
     rm -rf "$VPKG_HOME"/{lib, etc, src, tmp}/"$name"
   elif [ -n "$destroy" ]; then
-    __vpkg_destroy__
+    __vpkg_destroy
   fi
 }
 
-__vpkg_load__() {
+__vpkg_load() {
   local lib="$VPKG_HOME"/lib/"$name"
   
   # is anything suitable already loaded?
@@ -596,22 +560,22 @@ __vpkg_load__() {
     echo "$name/$build: already loaded" >&2 && return 0
   fi
   
-  __vpkg_defaults__
+  __vpkg_defaults
   
   # build stuff if we need to
   if [ ! -e "$VPKG_HOME"/lib/"$name"/"$build" ]; then
-    __vpkg_build__; [ $? != 0 ] && return 1
-    __vpkg_load__; return $?
+    __vpkg_build; [ $? != 0 ] && return 1
+    __vpkg_load; return $?
   fi
   
-  __vpkg_unload__ &> /dev/null; [ $? != 0 ] && return 1
+  __vpkg_unload &> /dev/null; [ $? != 0 ] && return 1
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
   export PATH="$lib"/"$build"/bin"$PATH"
 }
 
-__vpkg_unload__() {
+__vpkg_unload() {
   local build="$1"
   local lib="$VPKG_HOME"/lib/"$name"
   
