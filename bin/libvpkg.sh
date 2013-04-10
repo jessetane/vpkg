@@ -456,38 +456,9 @@ __vpkg_wrap() {
 }
 
 __vpkg_unwrap() {
-  local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
-  local dep dep_name dep_build loader dest
-  
-  # build loader
-  while read dep; do
-    dep=($dep)
-    dep_name="${dep[0]}"
-    dep_build="${dep[1]}"
-    loader="$loader\nvpkg load $dep_name $dep_build"
-  done < <(__vpkg_run_hook "dependencies")
-  
-  # only source the vpkg lib if we need it
-  [ -n "$loader" ] && loader=". libvpkg.sh$loader"
-  
-  # generate wrappers
+  local executable
   while read executable; do
-    mkdir -p "$sbin"
-    dest="$sbin"/"$executable"
-    
-    # executables get exec'd
-    if [ -x "$lib"/"$build"/bin/"$executable" ]; then
-      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
-      chmod +x "$dest"
-    
-    # sourceable shell scripts get sourced
-    elif echo "$executable" | egrep -q "\.sh$"; then
-      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
-    
-    # unknown file types get soft linked
-    else
-      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
-    fi
+    rm "$sbin"/"$executable"
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
 }
 
@@ -550,7 +521,7 @@ __vpkg_link() {
     local dest="$VPKG_HOME"/bin/"$executable"
   
     # linking happens differently depending on whether the file is executable
-    if [ -x "$sbin"/"$build"/bin/"$executable" ]; then
+    if [ -x "$sbin"/"$build"/"$executable" ]; then
     
       # link via exec
       echo "exec ${sbin}/${build}/bin/$executable "'"$@"' >> "$dest"
@@ -558,7 +529,7 @@ __vpkg_link() {
     else
     
       # soft link
-      ln -sf "$sbin"/"$build"/bin/"$executable" "$dest"
+      ln -sf "$sbin"/"$build"/"$executable" "$dest"
     fi
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
   
