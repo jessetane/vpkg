@@ -3,3 +3,5 @@ liba="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/liba/packa
 libb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/libb/package.sh"
 bina="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/bina/package.sh"
 binb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/binb/package.sh"
+node="https://raw.github.com/vpkg/node/master/package.sh"
+cpu="https://raw.github.com/jessetane/cpu/master/package.sh"
