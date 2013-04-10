@@ -46,6 +46,7 @@ bootstrap() {
   mkdir -p "$VPKG_HOME"/etc/vpkg
   mkdir -p "$VPKG_HOME"/tmp
   mkdir -p "$VPKG_HOME"/bin
+  mkdir -p "$VPKG_HOME"/sbin
   cd "$VPKG_HOME"/src/"$name"
   
   # autogenerate a sourceable profile
