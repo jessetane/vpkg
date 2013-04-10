@@ -460,7 +460,9 @@ __vpkg_wrap() {
 }
 
 __vpkg_unwrap() {
-  rm -rf "$VPKG_HOME"/sbin/"$name"/"$build"
+  local sbin="$VPKG_HOME"/sbin/"$name"
+  rm -rf "$sbin"/"$build"
+  [ -z "$(ls -A "$sbin")" ] && rm -rf "$sbin"
 }
 
 __vpkg_destroy() {
