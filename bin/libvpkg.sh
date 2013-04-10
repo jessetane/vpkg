@@ -654,7 +654,7 @@ __vpkg_load() {
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  PATH="$sbin"/"$build"/bin"$PATH"
+  PATH="$sbin"/"$build"/bin/"$PATH"
 }
 
 __vpkg_unload() {
