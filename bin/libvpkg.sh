@@ -241,7 +241,7 @@ __vpkg_build_deps() {
     build="${dep[1]}"
     version="$build"
     
-    # echo "$dependant: building dependency: $name $build..." >&2
+    echo "$dependant: building dependency: $name $build..." >&2
     __vpkg_defaults
     __vpkg_build
   done < <(__vpkg_run_hook "dependencies")
@@ -390,7 +390,6 @@ __vpkg_build() {
   local rebuild="$rebuild"
   
   __vpkg_fetch; [ $? != 0 ] && return 1
-  #__vpkg_fetch &> /dev/null; [ $? != 0 ] && return 1
   __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # if --rebuild, destroy first
