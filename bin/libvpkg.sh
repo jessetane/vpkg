@@ -234,6 +234,7 @@ __vpkg_build_deps() {
   local name="$name"
   local build
   local version
+  local rename
   
   while read dep; do
     dep=($dep)
@@ -312,6 +313,9 @@ __vpkg_fetch() {
   
   # do we have $name in our registries?
   url="$(__vpkg_lookup 2> /dev/null)" || url="$name"
+  
+  # if $name was in our registries and we are not force renaming, fetch as $name
+  [ "$url" != "$name" ] && [ -z "$rename" ] && rename="$name"
   
   # we should have a valid url by now
   ! curl -I "$url" &> /dev/null && echo "$url: package not registered and not a valid URL" >&2 && return 1
