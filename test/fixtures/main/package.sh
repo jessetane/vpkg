@@ -11,4 +11,6 @@ fetch() {
 dependencies() {
   echo "liba 0.0.1"
   echo "libb 0.0.2"
+  echo "bina 0.0.1"
+  echo "binb 0.0.2"
 }

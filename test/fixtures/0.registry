@@ -1,3 +1,5 @@
 main="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/main/package.sh"
 liba="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/liba/package.sh"
 libb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/libb/package.sh"
+bina="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/bina/package.sh"
+binb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/binb/package.sh"
