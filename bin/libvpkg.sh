@@ -589,19 +589,19 @@ __vpkg_uninstall() {
 }
 
 __vpkg_load() {
-  local lib="$VPKG_HOME"/lib/"$name"
+  local sbin="$VPKG_HOME"/sbin/"$name"
   
   # is anything suitable already loaded?
   [ -n "$build" ] && local search="$build" || local search="[^/]*"
-  if echo "$PATH" | grep -q "$lib/$search/bin"; then
-    build="$(echo "$PATH" | sed "s|.*$lib/\($search\)/bin.*|\1|")"
+  if echo "$PATH" | grep -q "$sbin/$search/bin"; then
+    build="$(echo "$PATH" | sed "s|.*$sbin/\($search\)/bin.*|\1|")"
     echo "$name/$build: already loaded" >&2 && return 0
   fi
   
   __vpkg_defaults
   
   # build stuff if we need to
-  if [ ! -e "$VPKG_HOME"/lib/"$name"/"$build" ]; then
+  if [ ! -e "$VPKG_HOME"/sbin/"$name"/"$build" ]; then
     __vpkg_build; [ $? != 0 ] && return 1
     __vpkg_load; return $?
   fi
@@ -610,23 +610,23 @@ __vpkg_load() {
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  PATH="$lib"/"$build"/bin"$PATH"
+  PATH="$sbin"/"$build"/bin"$PATH"
 }
 
 __vpkg_unload() {
   local build="$1"
-  local lib="$VPKG_HOME"/lib/"$name"
+  local sbin="$VPKG_HOME"/sbin/"$name"
   
   # don't unload unless loaded
-  if ! echo "$PATH" | grep -q "$lib/[^/]*/bin"; then
+  if ! echo "$PATH" | grep -q "$sbin/[^/]*/bin"; then
     echo "$name: not loaded" >&2
     return 0
-  elif [ -n "$build" ] && ! echo "$PATH" | grep -q "$lib/$build/bin"; then
+  elif [ -n "$build" ] && ! echo "$PATH" | grep -q "$sbin/$build/bin"; then
     echo "$name/$build: not loaded" >&2
     return 1
   fi
   
   # edit PATH
-  PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
-  PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
+  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*/bin:||g")"
+  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*/bin||g")"
 }
