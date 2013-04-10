@@ -467,7 +467,7 @@ __vpkg_wrap() {
 __vpkg_unwrap() {
   local sbin="$VPKG_HOME"/sbin/"$name"
   rm -rf "$sbin"/"$build"
-  [ -z "$(ls -A "$sbin")" ] && rm -rf "$sbin"
+  [ -z "$(ls -A "$sbin" 2> /dev/null)" ] && rm -rf "$sbin"
 }
 
 __vpkg_destroy() {
@@ -479,7 +479,7 @@ __vpkg_destroy() {
     [ ! -e "$lib"/"$build" ] && echo "$name/$build: not built" >&2 && return 0
     builds=("$build")
   else
-    builds=($(ls -A "$lib"))
+    builds=($(ls -A "$lib" 2> /dev/null))
   fi
   
   for build in "${builds[@]}"; do
@@ -491,7 +491,7 @@ __vpkg_destroy() {
   done
   
   # last one out turn out the light
-  [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
+  [ -z "$(ls -A "$lib" 2> /dev/null)" ] && rm -rf "$lib"
   
   # if we got here it worked
   return 0
