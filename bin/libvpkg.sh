@@ -454,6 +454,9 @@ __vpkg_wrap() {
       ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
     fi
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
+  
+  #
+  return 0
 }
 
 __vpkg_unwrap() {
