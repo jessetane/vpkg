@@ -407,13 +407,50 @@ __vpkg_build() {
   # hook
   __vpkg_run_hook "build"
   status="$?"
-
+  
   # build manually?
   if [ "$status" = 78 ]; then
     cp -R "$VPKG_HOME"/src/"$name" "$VPKG_HOME"/lib/"$name"/"$build"
-  else
+  elif [ "$status" != 0 ]; then
     return "$status"
   fi
+  
+  # wrap
+  __vpkg_wrap
+}
+
+__vpkg_wrap() {
+  local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
+  local dep dep_name dep_build dest
+  local loader=". libvpkg.sh"
+  
+  # build loader
+  while read dep; do
+    dep=($dep)
+    dep_name="${dep[0]}"
+    dep_build="${dep[1]}"
+    loader="$loader\nvpkg load $dep_name $dep_build"
+  done < <(__vpkg_run_hook "dependencies")
+  
+  # generate wrappers
+  while read executable; do
+    mkdir -p "$sbin"
+    dest="$sbin"/"$executable"
+    
+    # executables get exec'd
+    if [ -x "$lib"/"$build"/bin/"$executable" ]; then
+      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'$@' >> "$dest"
+      chmod +x "$dest"
+    
+    # sourceable shell scripts get sourced
+    elif echo "$executable" | grep -eq "\.sh$"; then
+      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'$@' >> "$dest"
+    
+    # unknown file types get soft linked
+    else
+      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
+    fi
+  done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
 }
 
 __vpkg_destroy() {
