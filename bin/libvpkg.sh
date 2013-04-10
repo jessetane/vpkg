@@ -290,6 +290,7 @@ __vpkg_lookup() {
 __vpkg_fetch() {
   local tmp
   local url
+  local rename
   local download
   local filetype
   
