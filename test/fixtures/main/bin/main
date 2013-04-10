@@ -1,0 +1,6 @@
+#
+
+. liba.sh
+. libb.sh
+liba
+libb

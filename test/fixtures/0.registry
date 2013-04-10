@@ -1,0 +1,3 @@
+main="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/main/package.sh"
+libb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/liba/package.sh"
+liba="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/libb/package.sh"
