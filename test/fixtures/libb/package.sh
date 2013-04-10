@@ -10,6 +10,5 @@ fetch() {
 
 build() {
   mkdir -p "$LIB"/bin
-  echo 'libb() { echo "libb: $VERSION"; }' > "$LIB"/bin/libb.sh
-  return 78
+  echo "libb() { echo \"libb: $VERSION\"; }" > "$LIB"/bin/libb.sh
 }

@@ -146,6 +146,7 @@ __vpkg_init() {
 }
 
 __vpkg_defaults() {
+  __vpkg_run_hook "version"
   [ -z "$build" ] && build="default"
   [ -z "$version" ] && version="$build"
 }
