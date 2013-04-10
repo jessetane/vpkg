@@ -1,0 +1,11 @@
+#
+
+echo "--- sourceables ---"
+. liba.sh
+. libb.sh
+liba
+libb
+
+echo "--- executables ---"
+bina
+binb
