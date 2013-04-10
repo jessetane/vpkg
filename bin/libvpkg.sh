@@ -443,7 +443,7 @@ __vpkg_wrap() {
       chmod +x "$dest"
     
     # sourceable shell scripts get sourced
-    elif echo "$executable" | grep -eq "\.sh$"; then
+    elif echo "$executable" | grep -e -q "\.sh$"; then
       echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'$@' >> "$dest"
     
     # unknown file types get soft linked
