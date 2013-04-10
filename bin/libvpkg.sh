@@ -584,7 +584,7 @@ __vpkg_unlink() {
   
   # remove old executables
   while read executable; do
-    rm "$VPKG_HOME"/sbin/"$executable"
+    rm "$VPKG_HOME"/bin/"$executable"
   done < <(ls -A "$lib"/"$link"/bin 2> /dev/null)
   
   # remove man pages
