@@ -2,5 +2,5 @@
 
 liba() { 
   . libb.sh
-  echo "liba: $VERSION" > libb: "$(libb)"
+  echo "liba: $VERSION -> libb: $(libb)"
 }

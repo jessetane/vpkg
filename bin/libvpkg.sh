@@ -491,6 +491,9 @@ __vpkg_destroy() {
   
   # last one out turn out the light
   [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
+  
+  # if we got here it worked
+  return 0
 }
 
 __vpkg_link() {
