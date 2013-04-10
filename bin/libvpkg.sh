@@ -415,6 +415,7 @@ __vpkg_build() {
   fi
   
   # wrap
+  echo "WTF"
   __vpkg_wrap
 }
 

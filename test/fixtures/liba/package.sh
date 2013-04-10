@@ -13,7 +13,6 @@ dependencies() {
 }
 
 build() {
-  mkdir "$LIB"
   cp -R "$SRC" "$LIB"
   liba="$LIB"/bin/liba.sh
   sed "s/\$VERSION/$VERSION/" < "$liba" > "$liba"

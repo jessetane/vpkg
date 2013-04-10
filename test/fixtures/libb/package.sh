@@ -9,6 +9,7 @@ fetch() {
 }
 
 build() {
-  echo 'libb() { echo "libb: $VERSION"; }' > "$SRC"/bin/libb.sh
+  mkdir -p "$LIB"/bin
+  echo 'libb() { echo "libb: $VERSION"; }' > "$LIB"/bin/libb.sh
   return 78
 }
