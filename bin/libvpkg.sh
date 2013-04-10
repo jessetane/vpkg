@@ -572,7 +572,7 @@ __vpkg_load() {
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  export PATH="$lib"/"$build"/bin"$PATH"
+  PATH="$lib"/"$build"/bin"$PATH"
 }
 
 __vpkg_unload() {
@@ -590,5 +590,5 @@ __vpkg_unload() {
   
   # edit PATH
   PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin:||g")"
-  export PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
+  PATH="$(echo "$PATH" | sed "s|$lib/[^/]*/bin||g")"
 }
