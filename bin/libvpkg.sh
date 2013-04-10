@@ -331,7 +331,6 @@ __vpkg_fetch() {
   # what'd we get?
   download="${tmp}/$(ls -A "$tmp")"
   filetype="$(file "$download" | sed "s/[^:]*: //")"
-  echo "ftype: $filetype"
   
   # recipe?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
