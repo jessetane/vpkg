@@ -390,7 +390,7 @@ __vpkg_build() {
   local rename="$rename"
   local rebuild="$rebuild"
   
-  __vpkg_fetch; [ $? != 0 ] && return 1  
+  __vpkg_fetch &> /dev/null; [ $? != 0 ] && return 1
   __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # if --rebuild, destroy first
@@ -416,11 +416,11 @@ __vpkg_build() {
   fi
   
   # wrap
-  echo "WTF"
   __vpkg_wrap
 }
 
 __vpkg_wrap() {
+  local lib="$VPKG_HOME"/lib/"$name"
   local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
   local dep dep_name dep_build loader dest
   
@@ -457,6 +457,7 @@ __vpkg_wrap() {
 }
 
 __vpkg_unwrap() {
+  local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
   local executable
   while read executable; do
     rm "$sbin"/"$executable"
@@ -610,8 +611,8 @@ __vpkg_load() {
   
   # is anything suitable already loaded?
   [ -n "$build" ] && local search="$build" || local search="[^/]*"
-  if echo "$PATH" | grep -q "$sbin/$search/bin"; then
-    build="$(echo "$PATH" | sed "s|.*$sbin/\($search\)/bin.*|\1|")"
+  if echo "$PATH" | grep -q "$sbin/$search"; then
+    build="$(echo "$PATH" | sed "s|.*$sbin/\($search\).*|\1|")"
     echo "$name/$build: already loaded" >&2 && return 0
   fi
   
@@ -627,7 +628,7 @@ __vpkg_load() {
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  PATH="$sbin"/"$build"/bin"$PATH"
+  PATH="$sbin"/"$build"/"$PATH"
 }
 
 __vpkg_unload() {
@@ -635,15 +636,15 @@ __vpkg_unload() {
   local sbin="$VPKG_HOME"/sbin/"$name"
   
   # don't unload unless loaded
-  if ! echo "$PATH" | grep -q "$sbin/[^/]*/bin"; then
+  if ! echo "$PATH" | grep -q "$sbin/[^/]*"; then
     echo "$name: not loaded" >&2
     return 0
-  elif [ -n "$build" ] && ! echo "$PATH" | grep -q "$sbin/$build/bin"; then
+  elif [ -n "$build" ] && ! echo "$PATH" | grep -q "$sbin/$build"; then
     echo "$name/$build: not loaded" >&2
     return 1
   fi
   
   # edit PATH
-  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*/bin:||g")"
-  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*/bin||g")"
+  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*:||g")"
+  PATH="$(echo "$PATH" | sed "s|$sbin/[^/]*||g")"
 }
