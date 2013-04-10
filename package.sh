@@ -59,7 +59,7 @@ bootstrap() {
   # install self
   git clone "$SOURCE/vpkg" "$VPKG_HOME"/src/vpkg
   git checkout "$version" &> /dev/null
-  ln -s "$VPKG_HOME"/src/vpkg/bin/vpkg.sh "$VPKG_HOME"/bin/
+  ln -s "$VPKG_HOME"/src/vpkg/bin/libvpkg.sh "$VPKG_HOME"/bin/
   
   # source profile
   . "$VPKG_HOME"/.vpkgrc
