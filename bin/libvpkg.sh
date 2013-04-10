@@ -164,9 +164,9 @@ __vpkg_run_hook() {
     
     # the build hook is basically required.
     # if your recipe doesn't define one, we
-    # need to return an error so that vpkg
+    # need to remove a flag so that vpkg
     # knows to generate the build manually
-    [ "$hook" = "build" ] && return 78
+    [ "$hook" = "build" ] && rm "$tmp"
     return 0
   fi
   
@@ -181,7 +181,7 @@ __vpkg_run_hook() {
     
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"   # clean arbitrary hooks
-    build() { return 78; }    # build is required, so it must return an error by default
+    build() { rm "$tmp"; }    # build is required, so it must clear a flag by default
     version() { :; }          # version is used every time
     
     # source the recipe
@@ -390,6 +390,7 @@ __vpkg_fetch() {
 }
 
 __vpkg_build() {
+  local tmp
   local build="$build"
   local version="$version"
   local rename="$rename"
@@ -410,14 +411,13 @@ __vpkg_build() {
   mkdir -p "$VPKG_HOME"/lib/"$name"
   
   # hook
-  __vpkg_run_hook "build"
-  status="$?"
+  ! tmp="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary file" >&2 && return 1
+  __vpkg_push_temp "$tmp"
+  __vpkg_run_hook "build"; [ $? != 0 ] && return 1
   
   # build manually?
-  if [ "$status" = 78 ]; then
+  if [ ! -e "$tmp" ]; then
     cp -R "$VPKG_HOME"/src/"$name" "$VPKG_HOME"/lib/"$name"/"$build"
-  elif [ "$status" != 0 ]; then
-    return "$status"
   fi
   
   # wrap
