@@ -146,7 +146,6 @@ __vpkg_init() {
 }
 
 __vpkg_defaults() {
-  __vpkg_run_hook "version"
   [ -z "$build" ] && build="default"
   [ -z "$version" ] && version="$build"
 }
@@ -461,14 +460,7 @@ __vpkg_wrap() {
 }
 
 __vpkg_unwrap() {
-  local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
-  local executable
-  while read executable; do
-    rm "$sbin"/"$executable"
-  done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
-  
-  # if we got here, it worked
-  return 0
+  rm -rf "$VPKG_HOME"/sbin/"$name"/"$build"
 }
 
 __vpkg_destroy() {
