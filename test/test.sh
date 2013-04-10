@@ -11,3 +11,7 @@ cd "$src"/vpkg/test/tmp
 
 # bootstrap
 curl -fL# "file://$src"/vpkg/package.sh | SOURCE="file://$src" bash
+
+#
+mkdir -p "$src"/vpkg/test/tmp/etc/vpkg
+cp "$src"/vpkg/test/fixtures/0.registry "$src"/vpkg/test/tmp/etc/vpkg/
