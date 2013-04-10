@@ -454,24 +454,69 @@ __vpkg_wrap() {
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
 }
 
+__vpkg_unwrap() {
+  local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
+  local dep dep_name dep_build loader dest
+  
+  # build loader
+  while read dep; do
+    dep=($dep)
+    dep_name="${dep[0]}"
+    dep_build="${dep[1]}"
+    loader="$loader\nvpkg load $dep_name $dep_build"
+  done < <(__vpkg_run_hook "dependencies")
+  
+  # only source the vpkg lib if we need it
+  [ -n "$loader" ] && loader=". libvpkg.sh$loader"
+  
+  # generate wrappers
+  while read executable; do
+    mkdir -p "$sbin"
+    dest="$sbin"/"$executable"
+    
+    # executables get exec'd
+    if [ -x "$lib"/"$build"/bin/"$executable" ]; then
+      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
+      chmod +x "$dest"
+    
+    # sourceable shell scripts get sourced
+    elif echo "$executable" | egrep -q "\.sh$"; then
+      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
+    
+    # unknown file types get soft linked
+    else
+      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
+    fi
+  done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
+}
+
 __vpkg_destroy() {
   local lib="$VPKG_HOME"/lib/"$name"
+  local build="$build"
+  local builds 
   
-  __vpkg_unload "$build" &> /dev/null; [ $? != 0 ] && return 1
-  __vpkg_unlink "$build" &> /dev/null; [ $? != 0 ] && return 1
-  __vpkg_defaults
-  
-  if [ -e "$lib"/"$build" ]; then
-    __vpkg_run_hook "destroy"; [ $? = 0 ] || return 1
-    rm -rf "$lib"/"$build"
-    [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
+  if [ -n "$build" ]; then
+    [ ! -e "$lib"/"$build" ] && echo "$name/$build: not built" >&2 && return 0
+    builds=("$build")
   else
-    echo "$name/$build: not built" >&2
+    builds=($(ls -A "$lib"))
   fi
+  
+  for build in "${builds[@]}"
+    __vpkg_unload "$build" &> /dev/null; [ $? != 0 ] && return 1
+    __vpkg_unlink "$build" &> /dev/null; [ $? != 0 ] && return 1
+    __vpkg_run_hook "destroy"; [ $? = 0 ] || return 1
+    __vpkg_unwrap
+    rm -rf "$lib"/"$build"
+  done
+  
+  # last one out turn out the light
+  [ -z "$(ls -A "$lib")" ] && rm -rf "$lib"
 }
 
 __vpkg_link() {
   local lib="$VPKG_HOME"/lib/"$name"
+  local sbin="$VPKG_HOME"/sbin/"$name"
   local executable mangroup manpage
   
   # is anything suitable already linked?
@@ -504,15 +549,15 @@ __vpkg_link() {
     local dest="$VPKG_HOME"/bin/"$executable"
   
     # linking happens differently depending on whether the file is executable
-    if [ -x "$lib"/"$build"/bin/"$executable" ]; then
+    if [ -x "$sbin"/"$build"/bin/"$executable" ]; then
     
       # link via exec
-      echo "exec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
+      echo "exec ${sbin}/${build}/bin/$executable "'"$@"' >> "$dest"
       chmod +x "$dest"
     else
     
       # soft link
-      ln -sf "$lib"/"$build"/bin/"$executable" "$dest"
+      ln -sf "$sbin"/"$build"/bin/"$executable" "$dest"
     fi
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
   
@@ -557,7 +602,7 @@ __vpkg_unlink() {
   
   # remove old executables
   while read executable; do
-    rm "$VPKG_HOME"/bin/"$executable"
+    rm "$VPKG_HOME"/sbin/"$executable"
   done < <(ls -A "$lib"/"$link"/bin 2> /dev/null)
   
   # remove man pages
