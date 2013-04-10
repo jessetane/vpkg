@@ -437,7 +437,7 @@ __vpkg_wrap() {
   done < <(__vpkg_run_hook "dependencies")
   
   # only source the vpkg lib if we need it
-  [ -n "$deps" ] && loader=". libvpkg.sh${deps}\n"
+  [ -n "$deps" ] && deps=". libvpkg.sh${deps}\n"
   
   # generate wrappers
   while read executable; do
