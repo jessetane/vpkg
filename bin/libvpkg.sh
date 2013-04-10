@@ -148,6 +148,7 @@ __vpkg_init() {
 __vpkg_defaults() {
   [ -z "$build" ] && build="default"
   [ -z "$version" ] && version="$build"
+  return 0
 }
 
 __vpkg_push_temp() {
@@ -615,6 +616,7 @@ __vpkg_uninstall() {
 }
 
 __vpkg_load() {
+  local lib="$VPKG_HOME"/lib/"$name"
   local sbin="$VPKG_HOME"/sbin/"$name"
   
   # is anything suitable already loaded?
@@ -627,7 +629,7 @@ __vpkg_load() {
   __vpkg_defaults
   
   # build stuff if we need to
-  if [ ! -e "$VPKG_HOME"/sbin/"$name"/"$build" ]; then
+  if [ ! -e "$lib"/"$build" ]; then
     __vpkg_build; [ $? != 0 ] && return 1
     __vpkg_load; return $?
   fi
