@@ -319,7 +319,7 @@ __vpkg_fetch() {
   [ "$url" != "$name" ] && [ -z "$rename" ] && rename="$name"
   
   # we should have a valid url by now
-  ! curl -I "$url" &> /dev/null && echo "$url: package not registered and not a valid URL" >&2 && return 1
+  ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^2" && echo "$url: package not registered and not a valid URL" >&2 && return 1
   
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
