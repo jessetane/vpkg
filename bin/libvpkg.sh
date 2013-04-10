@@ -421,8 +421,7 @@ __vpkg_build() {
 
 __vpkg_wrap() {
   local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
-  local dep dep_name dep_build dest
-  local loader=". libvpkg.sh"
+  local dep dep_name dep_build loader dest
   
   # build loader
   while read dep; do
@@ -432,6 +431,9 @@ __vpkg_wrap() {
     loader="$loader\nvpkg load $dep_name $dep_build"
   done < <(__vpkg_run_hook "dependencies")
   
+  # only source the vpkg lib if we need it
+  [ -n "$loader" ] && loader=". libvpkg.sh$loader"
+  
   # generate wrappers
   while read executable; do
     mkdir -p "$sbin"
@@ -439,12 +441,12 @@ __vpkg_wrap() {
     
     # executables get exec'd
     if [ -x "$lib"/"$build"/bin/"$executable" ]; then
-      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'$@' >> "$dest"
+      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
       chmod +x "$dest"
     
     # sourceable shell scripts get sourced
     elif echo "$executable" | egrep -q "\.sh$"; then
-      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'$@' >> "$dest"
+      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
     
     # unknown file types get soft linked
     else
@@ -506,7 +508,7 @@ __vpkg_link() {
     if [ -x "$lib"/"$build"/bin/"$executable" ]; then
     
       # link via exec
-      echo "exec ${lib}/${build}/bin/$executable "'$@' >> "$dest"
+      echo "exec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
       chmod +x "$dest"
     else
     
