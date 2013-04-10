@@ -534,7 +534,7 @@ __vpkg_link() {
     if [ -x "$sbin"/"$build"/"$executable" ]; then
     
       # link via exec
-      echo "exec ${sbin}/${build}/bin/$executable "'"$@"' >> "$dest"
+      echo "exec ${sbin}/${build}/$executable "'"$@"' >> "$dest"
       chmod +x "$dest"
     else
     
