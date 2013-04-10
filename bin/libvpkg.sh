@@ -502,7 +502,7 @@ __vpkg_destroy() {
     builds=($(ls -A "$lib"))
   fi
   
-  for build in "${builds[@]}"
+  for build in "${builds[@]}"; do
     __vpkg_unload "$build" &> /dev/null; [ $? != 0 ] && return 1
     __vpkg_unlink "$build" &> /dev/null; [ $? != 0 ] && return 1
     __vpkg_run_hook "destroy"; [ $? = 0 ] || return 1
@@ -654,7 +654,7 @@ __vpkg_load() {
   
   # add package/version/bin to PATH
   [ -n "$PATH" ] && PATH=":$PATH"
-  PATH="$sbin"/"$build"/bin/"$PATH"
+  PATH="$sbin"/"$build"/bin"$PATH"
 }
 
 __vpkg_unload() {
