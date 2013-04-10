@@ -43,7 +43,7 @@ bootstrap() {
   # make some dirs
   mkdir -p "$VPKG_HOME"/src/"$name"
   mkdir -p "$VPKG_HOME"/share/man
-  mkdir -p "$VPKG_HOME"/etc
+  mkdir -p "$VPKG_HOME"/etc/vpkg
   mkdir -p "$VPKG_HOME"/tmp
   mkdir -p "$VPKG_HOME"/bin
   cd "$VPKG_HOME"/src/"$name"
