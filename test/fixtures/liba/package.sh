@@ -14,6 +14,7 @@ dependencies() {
 
 build() {
   cp -R "$SRC" "$LIB"
-  liba="$LIB"/bin/liba.sh
-  sed "s/\$VERSION/$VERSION/" < "$liba" > "$liba"
+  bin="$LIB"/bin
+  sed "s/\$VERSION/$VERSION/" < "$bin"/liba.sh > "$bin"/tmp
+  mv "$bin"/tmp "$bin"/liba.sh
 }
