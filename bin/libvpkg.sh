@@ -166,7 +166,7 @@ __vpkg_run_hook() {
     # if your recipe doesn't define one, we
     # need to remove a flag so that vpkg
     # knows to generate the build manually
-    [ "$hook" = "build" ] && rm "$tmp"
+    [ "$hook" = "build" ] && rm "$build_flag"
     return 0
   fi
   
@@ -180,9 +180,9 @@ __vpkg_run_hook() {
     [ -d "$VPKG_HOME"/src/"$name" ] && cd "$VPKG_HOME"/src/"$name"
     
     # ensure our hooks are clean or have sensible defaults
-    eval "${hook}() { :; }"   # clean arbitrary hooks
-    build() { rm "$tmp"; }    # build is required, so it must clear a flag by default
-    version() { :; }          # version is used every time
+    eval "${hook}() { :; }"         # clean arbitrary hooks
+    build() { rm "$build_flag"; }   # build is required, so it must clear a flag by default
+    version() { :; }                # version is used every time
     
     # source the recipe
     . "$recipe"
@@ -390,11 +390,11 @@ __vpkg_fetch() {
 }
 
 __vpkg_build() {
-  local tmp
   local build="$build"
   local version="$version"
   local rename="$rename"
   local rebuild="$rebuild"
+  local build_flag
   
   __vpkg_fetch; [ $? != 0 ] && return 1
   __vpkg_build_deps; [ $? != 0 ] && return 1
@@ -411,12 +411,12 @@ __vpkg_build() {
   mkdir -p "$VPKG_HOME"/lib/"$name"
   
   # hook
-  ! tmp="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary file" >&2 && return 1
-  __vpkg_push_temp "$tmp"
+  ! build_flag="$(mktemp "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary file" >&2 && return 1
+  __vpkg_push_temp "$build_flag"
   __vpkg_run_hook "build"; [ $? != 0 ] && return 1
   
   # build manually?
-  if [ ! -e "$tmp" ]; then
+  if [ ! -e "$build_flag" ]; then
     cp -R "$VPKG_HOME"/src/"$name" "$VPKG_HOME"/lib/"$name"/"$build"
   fi
   
