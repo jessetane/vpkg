@@ -390,7 +390,8 @@ __vpkg_build() {
   local rename="$rename"
   local rebuild="$rebuild"
   
-  __vpkg_fetch &> /dev/null; [ $? != 0 ] && return 1
+  __vpkg_fetch; [ $? != 0 ] && return 1
+  #__vpkg_fetch &> /dev/null; [ $? != 0 ] && return 1
   __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # if --rebuild, destroy first
@@ -422,18 +423,18 @@ __vpkg_build() {
 __vpkg_wrap() {
   local lib="$VPKG_HOME"/lib/"$name"
   local sbin="$VPKG_HOME"/sbin/"$name"/"$build"
-  local dep dep_name dep_build loader dest
+  local dep deps dep_name dep_build dest
   
   # build loader
   while read dep; do
     dep=($dep)
     dep_name="${dep[0]}"
     dep_build="${dep[1]}"
-    loader="$loader\nvpkg load $dep_name $dep_build"
+    deps="$deps\nvpkg load $dep_name $dep_build"
   done < <(__vpkg_run_hook "dependencies")
   
   # only source the vpkg lib if we need it
-  [ -n "$loader" ] && loader=". libvpkg.sh$loader"
+  [ -n "$deps" ] && loader=". libvpkg.sh${deps}\n"
   
   # generate wrappers
   while read executable; do
@@ -442,12 +443,12 @@ __vpkg_wrap() {
     
     # executables get exec'd
     if [ -x "$lib"/"$build"/bin/"$executable" ]; then
-      echo -e "${loader}\nexec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
+      echo -e "${deps}exec ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
       chmod +x "$dest"
     
     # sourceable shell scripts get sourced
     elif echo "$executable" | egrep -q "\.sh$"; then
-      echo -e "${loader}\nsource ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
+      echo -e "${deps}source ${lib}/${build}/bin/$executable "'"$@"' >> "$dest"
     
     # unknown file types get soft linked
     else
@@ -455,7 +456,7 @@ __vpkg_wrap() {
     fi
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
   
-  #
+  # if we got here, it worked
   return 0
 }
 
@@ -465,6 +466,9 @@ __vpkg_unwrap() {
   while read executable; do
     rm "$sbin"/"$executable"
   done < <(ls -A "$lib"/"$build"/bin 2> /dev/null)
+  
+  # if we got here, it worked
+  return 0
 }
 
 __vpkg_destroy() {
