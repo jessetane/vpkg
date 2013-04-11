@@ -5,3 +5,5 @@ bina="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/bina/packa
 binb="file:///Users/jessetane/Dropbox/software/src/vpkg/test/fixtures/binb/package.sh"
 node="https://raw.github.com/vpkg/node/master/package.sh"
 cpu="https://raw.github.com/jessetane/cpu/master/package.sh"
+#httpcat="https://raw.github.com/jessetane/httpcat/master/package.sh"
+httpcat="https://github.com/jessetane/httpcat/archive/0.0.5.tar.gz"
