@@ -296,7 +296,7 @@ __vpkg_fetch_url() {
   # recipe?
   if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
     filetype="recipe"
-    
+  
   # archive? something else?
   else
     
@@ -407,11 +407,15 @@ __vpkg_fetch() {
   if [ ! -e "$VPKG_HOME"/src/"$name" ]; then
     __vpkg_run_hook "fetch"; [ $? != 0 ] && return 1
     
-    # if we STILL don't have source code, and we chagned names, try copying it over manually
-    if [ ! -e "$VPKG_HOME"/src/"$name" ] && [ "$original" != "$name" ]; then
-      cp -R "$VPKG_HOME"/src/"$original" "$VPKG_HOME"/src/"$name"
-    else
-      echo "$name: source could not be fetched" >&2 && return 1
+    # hmm, we STILL don't have source code...
+    if [ ! -e "$VPKG_HOME"/src/"$name" ]; then
+
+      # if we changed names, try copying it over manually
+      if [ "$original" != "$name" ]; then
+        cp -R "$VPKG_HOME"/src/"$original" "$VPKG_HOME"/src/"$name"
+      else
+        echo "$name: source could not be fetched" >&2 && return 1
+      fi
     fi
   fi
 }
