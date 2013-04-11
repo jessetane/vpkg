@@ -243,7 +243,7 @@ __vpkg_run_hook() {
     set -e
     
     # cd into the package's src dir if it exists
-    [ -d "$VPKG_HOME"/src/"$name" ] && cd "$VPKG_HOME"/src/"$name"
+    cd "$VPKG_HOME"
     
     # ensure our hooks are clean or have sensible defaults
     eval "${hook}() { :; }"         # clean arbitrary hooks
