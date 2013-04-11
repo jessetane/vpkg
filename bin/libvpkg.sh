@@ -403,20 +403,20 @@ __vpkg_fetch() {
     cp "$VPKG_HOME"/etc/"$original"/package.sh "$package_sh"
   fi
   
-  # try the fetch hook if we don't have source code
+  # hook
+  __vpkg_run_hook "fetch"; [ $? != 0 ] && return 1
+  
+  # did we get source code?
   if [ ! -e "$VPKG_HOME"/src/"$name" ]; then
-    __vpkg_run_hook "fetch"; [ $? != 0 ] && return 1
-    
-    # hmm, we STILL don't have source code...
-    if [ ! -e "$VPKG_HOME"/src/"$name" ]; then
 
-      # if we changed names, try copying it over manually
-      if [ "$original" != "$name" ]; then
-        cp -R "$VPKG_HOME"/src/"$original" "$VPKG_HOME"/src/"$name"
-      else
-        echo "$name: source could not be fetched" >&2 && return 1
-      fi
+    # if we changed names, try copying it over manually
+    if [ "$original" != "$name" ] && [ -e "$VPKG_HOME"/src/"$original" ]; then
+      cp -R "$VPKG_HOME"/src/"$original" "$VPKG_HOME"/src/"$name"
+    else
+      echo "$name: source could not be fetched" >&2 && return 1
     fi
+  else  
+    return 0
   fi
 }
 
