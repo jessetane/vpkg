@@ -12,7 +12,7 @@ A language agnostic, multi-version tolerant package manager.
 Don't use this. It's just an academic project for teaching myself about package managers and shell scripting.
 
 ## Why
-I hate the idea that I need a different package manager for every language/platform. Also, I don't believe in `apt-get upgrade`.
+I hate the idea that I need a different package manager for every language/platform.
 
 ## How
 Sourcable shell scripts.
