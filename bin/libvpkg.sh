@@ -309,7 +309,7 @@ __vpkg_fetch_url() {
     
     # unknown
     else
-      echo "fetch: unknown filetype: $(file "$download")" >&2 && return 1
+      echo "fetch: unknown filetype: $filetype" >&2 && return 1
     fi
     
     # get the name of whatever was unarchived
