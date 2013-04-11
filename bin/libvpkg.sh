@@ -155,6 +155,72 @@ __vpkg_push_temp() {
   tmps=("${#tmps[@]}" "$1")
 }
 
+__vpkg_package_exists() {
+  test -e "$VPKG_HOME"/etc/"$name"/package.sh
+}
+
+__vpkg_choose_package_name() {  
+  local n=0
+  local original="$1"
+  local default="$original"
+  
+  # if we are connected to a terminal we can ask for it
+  if [ -t 1 ]; then
+    name=""
+    while [ -z "$name" ]; do
+      read -a name -p "> save as [$default]: "
+      [ -z "$name" ] && name="$default"
+      if __vpkg_package_exists; then
+        default="${original}_$((n++))"
+        name=""
+      fi
+    done
+
+  # if we don't have a terminal, just use the default
+  else
+    name="$default"
+  fi
+}
+
+__vpkg_update() {
+  echo "update.private: $name: not-implemented" >&2
+}
+
+__vpkg_lookup() {
+  local registry_cache="$VPKG_HOME"/etc/vpkg
+  local recipe_url
+  
+  # update registries if the cache is empty
+  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]; then
+    #vpkg update &> /dev/null || {
+      echo "warning: attempted to lookup $name, but no registries were found. try running"'`vpkg update`' >&2
+      return 1
+    #}
+  fi
+  
+  # attempt to lookup a url for $name from your registries
+  while read registry
+  do
+  
+    # in a subshell, source the registry and do a lookup
+    recipe_url="$(
+      unset "$name" 2> /dev/null;
+      source "$registry_cache/$registry";
+      [ -n "${!name}" ] && echo "${!name}"
+    )"
+    
+    # if we found a url, break out of the loop
+    [ -n "$recipe_url" ] && break
+  
+  done < <(ls -A "$registry_cache")
+  
+  # if we didn't get a url, that's an error
+  [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
+  
+  # print url to stdout
+  echo "$recipe_url"
+}
+
 __vpkg_run_hook() {
   local hook="$1"
   local recipe="$VPKG_HOME"/etc/"$name"/package.sh && [ -n "$2" ] && recipe="$2"
@@ -206,26 +272,147 @@ __vpkg_run_hook() {
   )
 }
 
-__vpkg_choose_package_name() {  
-  local n=0
-  local original="$1"
-  local default="$original"
+__vpkg_fetch_url() {
+  local tmp
   
-  # if we are connected to a terminal we can ask for it
-  if [ -t 1 ]; then
-    name=""
-    while [ -z "$name" ]; do
-      read -a name -p "> save as [$default]: "
-      [ -z "$name" ] && name="$default"
-      if [ -e "$VPKG_HOME"/src/"$name" ]; then
-        default="${original}_$((n++))"
-        name=""
-      fi
-    done
-
-  # if we don't have a terminal, just use the default
+  # url is valid?
+  ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^2" && echo "$url: not a valid URL" >&2 && return 1
+  
+  # create a temp folder to download to
+  ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
+  __vpkg_push_temp "$tmp"
+  
+  # attempt download in subshell so we can cd into tmp
+  echo "downloading $url..."
+  (
+    cd "$tmp"
+    ! curl -fLO# "$url" && return 1
+  )
+  
+  # what'd we get?
+  download="${tmp}/$(ls -A "$tmp")"
+  filetype="$(file "$download" | sed "s/[^:]*: //")"
+  
+  # recipe?
+  if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
+    filetype="recipe"
+    
+  # archive? something else?
   else
-    name="$default"
+    
+    # tarball?
+    if echo "$filetype" | grep -q "gzip compressed"; then
+      ! tar -xvzf "$download" -C "$tmp" && return 1
+    
+    # zip archive?
+    elif echo "$filetype" | grep -q "Zip archive"; then
+      ! unzip "$download" -d "$tmp" && return 1
+    
+    # unknown
+    else
+      echo "fetch: unknown filetype: $filetype" >&2 && return 1
+    fi
+    
+    # get the name of whatever was unarchived
+    rm "$download"
+    download=($(ls -A "$tmp"))
+    filetype="source"
+  fi
+}
+
+__vpkg_fetch() {
+  local url
+  local original="$name"
+  local package_sh="$VPKG_HOME"/etc/"$name"/package.sh
+  local download
+  local filetype
+  
+  # are we missing package.sh?
+  if ! __vpkg_package_exists; then
+    
+    # get a url any way we can
+    url="$(__vpkg_lookup 2> /dev/null)" 
+    
+    # did we get a url?
+    if [ -z "$url" ]; then
+      
+      # if we couldn't do a lookup, but we have source code, that's OK
+      if [ -e "$VPKG_HOME"/src/"$name" ]; then
+        package_sh="$VPKG_HOME"/etc/"$name"/package.sh
+        mkdir -p "$VPKG_HOME"/etc/"$name"
+        touch "$package_sh"
+        return 0
+      fi
+      url="$name"
+    fi
+    
+    # fetch it
+    __vpkg_fetch_url; [ $? != 0 ] && return 1
+    
+    # did we get a recipe
+    if [ "$filetype" = "recipe" ]; then
+      
+      # try to rename via --as or package.sh name
+      [ -n "$rename" ] && name="$rename" || name="$(__vpkg_run_hook "name" "$download")"
+      [ -z "$name" ] && echo "$url: package.sh did not provide a name, try passing one manually with --as <name>" && return 1
+    
+      # bail if the package already exists
+      __vpkg_package_exists && echo "$name: package exists" >&2 && return 1
+      
+      # copy over the download package.sh
+      package_sh="$VPKG_HOME"/etc/"$name"/package.sh
+      mkdir -p "$VPKG_HOME"/etc/"$name"
+      mv "$download" "$package_sh"
+    
+    # we got raw source code
+    else
+      
+      # try to rename
+      if [ -n "$rename" ]; then
+        name="$rename"
+      else
+        __vpkg_choose_package_name "$download"
+      fi
+      
+      # bail if the package already exists
+      __vpkg_package_exists && echo "$name: pacakge exists" >&2 && return 1
+      
+      # generate package.sh
+      package_sh="$VPKG_HOME"/etc/"$name"/package.sh
+      mkdir -p "$VPKG_HOME"/etc/"$name"
+      if [ -e "$tmp"/"$download"/package.sh ]; then
+        cp "$tmp"/"$download"/package.sh "$package_sh"
+      else
+        touch "$package_sh"
+      fi
+      
+      # copy over the source
+      mv "$tmp"/"$download" "$VPKG_HOME"/src/"$name"
+    fi
+    
+  # so we have pkg.sh, but was the user trying to rename?
+  elif [ -n "$rename" ]; then
+    name="$rename"
+    
+    # bail if the package already exists
+    __vpkg_package_exists && echo "$name: pacakge exists" >&2 && return 1
+    
+    # copy over the package.sh
+    package_sh="$VPKG_HOME"/etc/"$name"/package.sh
+    mkdir -p "$VPKG_HOME"/etc/"$name"
+    cp "$VPKG_HOME"/etc/"$original"/package.sh "$package_sh"
+  fi
+  
+  # try the fetch hook if we don't have source code
+  if [ ! -e "$VPKG_HOME"/src/"$name" ]; then
+    __vpkg_run_hook "fetch"; [ $? != 0 ] && return 1
+    
+    # if we STILL don't have source code, and we chagned names, try copying it over manually
+    if [ ! -e "$VPKG_HOME"/src/"$name" ] && [ "$original" != "$name" ]; then
+      cp -R "$VPKG_HOME"/src/"$original" "$VPKG_HOME"/src/"$name"
+    else
+      echo "$name: source could not be fetched" >&2 && return 1
+    fi
   fi
 }
 
@@ -249,155 +436,12 @@ __vpkg_build_deps() {
   done < <(__vpkg_run_hook "dependencies")
 }
 
-__vpkg_update() {
-  echo "update.private: $name: not-implemented" >&2
-}
-
-__vpkg_lookup() {
-  local registry_cache="$VPKG_HOME"/etc/vpkg
-  local recipe_url
-  
-  # update registries if the cache is empty
-  if [ ! -e "$registry_cache" ] || [ -z "$(ls -A "$registry_cache")" ]; then
-    #vpkg update &> /dev/null || {
-      echo "warning: attempted to lookup $name, but no registries were found. try running"'`vpkg update`' >&2
-      return 1
-    #}
-  fi
-  
-  # attempt to lookup a url for $name from your registries
-  while read registry
-  do
-  
-    # in a subshell, source the registry and do a lookup
-    recipe_url="$(
-      unset "$name" 2> /dev/null;
-      source "$registry_cache/$registry";
-      [ -n "${!name}" ] && echo "${!name}"
-    )"
-    
-    # if we found a url, break out of the loop
-    [ -n "$recipe_url" ] && break
-  
-  done < <(ls -A "$registry_cache")
-  
-  # if we didn't get a url, that's an error
-  [ -z "$recipe_url" ] && echo "$name: recipe not found" >&2 && return 1
-  
-  # print url to stdout
-  echo "$recipe_url"
-}
-
-__vpkg_fetch() {
-  local tmp
-  local url
-  local rename
-  local download
-  local filetype
-  
-  # do not proceed if rename was specd but the source already exists
-  [ -n "$rename" ] && [ -e "$VPKG_HOME"/src/"$rename" ] && echo "$rename: source exists" >&2 && return 0
-  
-  # already have in src?
-  if [ -e "$VPKG_HOME"/src/"$name" ]; then
-    
-    # are we renaming?
-    if [ -n "$rename" ]; then
-      cp -R "$VPKG_HOME"/src/"$name" "$VPKG_HOME"/src/"$rename"
-    fi
-    return 0
-  fi
-  
-  # do we have a recipe?
-  if [ -e "$VPKG_HOME"/etc/"$name"/package.sh ]; then
-    __vpkg_run_hook "fetch"; return $?
-  fi
-  
-  # do we have $name in our registries?
-  url="$(__vpkg_lookup 2> /dev/null)" || url="$name"
-  
-  # if $name was in our registries and we are not force renaming, fetch as $name
-  [ "$url" != "$name" ] && [ -z "$rename" ] && rename="$name"
-  
-  # we should have a valid url by now
-  ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^2" && echo "$url: package not registered and not a valid URL" >&2 && return 1
-  
-  # create a temp folder to download to
-  ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
-  __vpkg_push_temp "$tmp"
-  
-  # try to download file
-  # do in subshell for cd
-  echo "downloading $url..."
-  (
-    cd "$tmp"
-    ! curl -fLO# "$url" && return 1
-  )
-  
-  # what'd we get?
-  download="${tmp}/$(ls -A "$tmp")"
-  filetype="$(file "$download" | sed "s/[^:]*: //")"
-  
-  # recipe?
-  if echo "$filetype" | grep -q "\(shell\|bash\|zsh\).*executable"; then
-    [ -n "$rename" ] && name="$rename" || name="$(__vpkg_run_hook "name" "$download")"
-    [ -z "$name" ] && echo "$url: recipe did not provide a name, try passing one manually: "'`vpkg <command> <url> --as <name>`' && return 1
-    
-    # copy recipe to etc
-    mkdir -p "$VPKG_HOME"/etc/"$name"
-    rm -f "$VPKG_HOME"/etc/"$name"/package.sh
-    cp "$download" "$VPKG_HOME"/etc/"$name"/package.sh
-    
-    # try again now that we have a recipe
-    __vpkg_fetch; return $?
-  
-  # archive? something else?
-  else
-    
-    # tarball?
-    if echo "$filetype" | grep -q "gzip compressed"; then
-      ! tar -xvzf "$download" -C "$tmp" && return 1
-    
-    # zip archive?
-    elif echo "$filetype" | grep -q "Zip archive"; then
-      ! unzip "$download" -d "$tmp" && return 1
-    
-    # unknown
-    else
-      echo "fetch: unknown filetype: $filetype" >&2 && return 1
-    fi
-    
-    # get the name of whatever was unarchived
-    rm "$download"
-    download=($(ls -A "$tmp"))
-    
-    # rename if possible 
-    if [ -n "$rename" ]; then
-      name="$rename"
-    
-    # otherwise give the user a chance
-    else
-      __vpkg_choose_package_name "$download"
-      [ -e "$VPKG_HOME"/src/"$name" ] && echo "$name: source exists" >&2 && return 1
-    fi
-    
-    # copy over the files
-    mv "$tmp"/"$download" "$VPKG_HOME"/src/"$name"
-  fi
-  
-  # if we got here, it worked
-  return 0
-}
-
 __vpkg_build() {
   local build="$build"
   local version="$version"
   local rename="$rename"
   local rebuild="$rebuild"
   local build_flag
-  
-  __vpkg_fetch; [ $? != 0 ] && return 1
-  __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # if --rebuild, destroy first
   if [ -n "$rebuild" ]; then
@@ -406,6 +450,10 @@ __vpkg_build() {
   
   # already built?
   [ -e "$VPKG_HOME"/lib/"$name"/"$build" ] && return 0
+  
+  # get recipes/deps/source
+  __vpkg_fetch; [ $? != 0 ] && return 1
+  __vpkg_build_deps; [ $? != 0 ] && return 1
   
   # mkdirs
   mkdir -p "$VPKG_HOME"/lib/"$name"
