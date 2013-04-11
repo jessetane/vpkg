@@ -273,7 +273,6 @@ __vpkg_run_hook() {
 }
 
 __vpkg_fetch_url() {
-  local tmp
   
   # url is valid?
   ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^\(2\|3\)" && echo "$url: not a valid URL" >&2 && return 1
@@ -321,6 +320,7 @@ __vpkg_fetch_url() {
 }
 
 __vpkg_fetch() {
+  local tmp
   local url
   local original="$name"
   local package_sh="$VPKG_HOME"/etc/"$name"/package.sh
