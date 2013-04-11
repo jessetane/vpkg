@@ -276,7 +276,7 @@ __vpkg_fetch_url() {
   local tmp
   
   # url is valid?
-  ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^2" && echo "$url: not a valid URL" >&2 && return 1
+  ! curl -Ifso /dev/null -w "%{http_code}" "$url" | grep -q "^\(2\|3\)" && echo "$url: not a valid URL" >&2 && return 1
   
   # create a temp folder to download to
   ! tmp="$(mktemp -d "$VPKG_HOME"/tmp/vpkg.XXXXXXXXX)" && echo "fetch: could not create temporary directory" >&2 && return 1
@@ -310,7 +310,7 @@ __vpkg_fetch_url() {
     
     # unknown
     else
-      echo "fetch: unknown filetype: $filetype" >&2 && return 1
+      echo "fetch: unknown filetype: $(file "$download")" >&2 && return 1
     fi
     
     # get the name of whatever was unarchived
